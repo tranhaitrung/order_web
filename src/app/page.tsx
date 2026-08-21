@@ -1,69 +1,144 @@
-import Image from "next/image";
+"use client";
+
+import { useMemo, useState } from "react";
+import { CATEGORIES, CategoryId, MenuItem } from "@/lib/menu-data";
+import { useCartStore, cartCount, cartTotal } from "@/hooks/useCartStore";
+import { useScrollSpy } from "@/hooks/useScrollSpy";
+import { STICKY_NAV_OFFSET_PX } from "@/lib/layout-constants";
+import { BrandHeader } from "@/components/menu/BrandHeader";
+import { CategoryTabs } from "@/components/menu/CategoryTabs";
+import { MenuSections, sectionIdFor } from "@/components/menu/MenuSections";
+import { ItemModal } from "@/components/item-modal/ItemModal";
+import { CartBar } from "@/components/cart/CartBar";
+import { CartDrawer } from "@/components/cart/CartDrawer";
+import { CheckoutView, type CheckoutPayload } from "@/components/checkout/CheckoutView";
+import { ConfirmationView } from "@/components/checkout/ConfirmationView";
+import { ErrorView } from "@/components/checkout/ErrorView";
+
+type View = "browsing" | "checkout" | "success" | "error";
 
 export default function Home() {
+  const [activeItem, setActiveItem] = useState<MenuItem | null>(null);
+  const [isCartOpen, setIsCartOpen] = useState(false);
+  const [view, setView] = useState<View>("browsing");
+  const [submitting, setSubmitting] = useState(false);
+  const [errorMessage, setErrorMessage] = useState("");
+  const [lastPayload, setLastPayload] = useState<CheckoutPayload | null>(null);
+
+  const sectionIds = useMemo(() => CATEGORIES.map((c) => sectionIdFor(c.id)), []);
+  const activeSectionId = useScrollSpy(sectionIds, STICKY_NAV_OFFSET_PX);
+  const activeCategory = (activeSectionId?.replace("section-", "") ?? CATEGORIES[0].id) as CategoryId;
+
+  const lines = useCartStore((state) => state.lines);
+  const addLine = useCartStore((state) => state.addLine);
+  const updateQuantity = useCartStore((state) => state.updateQuantity);
+  const removeLine = useCartStore((state) => state.removeLine);
+  const clearCart = useCartStore((state) => state.clear);
+
+  function scrollToCategory(category: CategoryId) {
+    document.getElementById(sectionIdFor(category))?.scrollIntoView({ behavior: "smooth", block: "start" });
+  }
+
+  async function submitOrder(payload: CheckoutPayload) {
+    setSubmitting(true);
+    setLastPayload(payload);
+
+    try {
+      const response = await fetch("/api/orders", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          customerName: payload.customerName,
+          customerPhone: payload.customerPhone,
+          deliveryAddress: payload.deliveryAddress,
+          deliveryDate: payload.deliveryDate,
+          deliverySlot: payload.deliverySlot,
+          items: lines.map((line) => ({
+            itemId: line.itemId,
+            quantity: line.quantity,
+            toppingIds: line.toppingIds,
+            sugarLevel: line.sugarLevel,
+            iceLevel: line.iceLevel,
+            note: line.note,
+          })),
+        }),
+      });
+
+      if (response.ok) {
+        clearCart();
+        setView("success");
+        return;
+      }
+
+      const body = await response.json().catch(() => null);
+      setErrorMessage(body?.message ?? "Không gửi được đơn hàng, vui lòng thử lại.");
+      setView("error");
+    } catch {
+      setErrorMessage("Mất kết nối mạng, vui lòng thử lại.");
+      setView("error");
+    } finally {
+      setSubmitting(false);
+    }
+  }
+
+  if (view === "checkout") {
+    return (
+      <CheckoutView
+        lines={lines}
+        submitting={submitting}
+        onBack={() => setView("browsing")}
+        onSubmit={submitOrder}
+      />
+    );
+  }
+
+  if (view === "success") {
+    return <ConfirmationView onOrderMore={() => setView("browsing")} />;
+  }
+
+  if (view === "error") {
+    return (
+      <ErrorView
+        message={errorMessage}
+        onRetry={() => {
+          if (lastPayload) void submitOrder(lastPayload);
+        }}
+      />
+    );
+  }
+
   return (
-    <div className="flex flex-col flex-1 items-center justify-center bg-zinc-50 font-sans dark:bg-black">
-      <main className="flex flex-1 w-full max-w-3xl flex-col items-center justify-between py-32 px-16 bg-white dark:bg-black sm:items-start">
-        <Image
-          className="dark:invert h-5 w-[100px]"
-          src="/next.svg"
-          alt="Next.js logo"
-          width={100}
-          height={20}
-          priority
+    <div className="pb-4">
+      <BrandHeader />
+      <div className="sticky top-0 z-20 bg-bg/95 backdrop-blur-sm">
+        <CategoryTabs active={activeCategory} onSelect={scrollToCategory} />
+      </div>
+      <MenuSections onSelect={setActiveItem} />
+
+      {activeItem ? (
+        <ItemModal
+          item={activeItem}
+          onClose={() => setActiveItem(null)}
+          onAddToCart={({ quantity, toppingIds, sugarLevel, iceLevel, note }) =>
+            addLine({ itemId: activeItem.id, quantity, toppingIds, sugarLevel, iceLevel, note })
+          }
         />
-        <div className="flex flex-col items-center gap-6 text-center sm:items-start sm:text-left">
-          <h1 className="max-w-xs text-3xl font-semibold leading-10 tracking-tight text-black dark:text-zinc-50">
-            To get started, edit the{" "}
-            <code className="rounded bg-black/[.06] px-1.5 py-0.5 font-mono text-[0.9em] dark:bg-white/[.08]">
-              page.tsx
-            </code>{" "}
-            file.
-          </h1>
-          <p className="max-w-md text-lg leading-8 text-zinc-600 dark:text-zinc-400">
-            Looking for a starting point or more instructions? Head over to{" "}
-            <a
-              href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Templates
-            </a>{" "}
-            or the{" "}
-            <a
-              href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Learning
-            </a>{" "}
-            center.
-          </p>
-        </div>
-        <div className="flex flex-col gap-4 text-base font-medium sm:flex-row">
-          <a
-            className="flex h-12 w-full items-center justify-center gap-2 rounded-full bg-foreground px-5 text-background transition-colors hover:bg-[#383838] dark:hover:bg-[#ccc] md:w-[158px]"
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            <Image
-              className="dark:invert h-[14px] w-4"
-              src="/vercel.svg"
-              alt="Vercel logomark"
-              width={16}
-              height={14}
-            />
-            Deploy Now
-          </a>
-          <a
-            className="flex h-12 w-full items-center justify-center rounded-full border border-solid border-black/[.08] px-5 transition-colors hover:border-transparent hover:bg-black/[.04] dark:border-white/[.145] dark:hover:bg-[#1a1a1a] md:w-[158px]"
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Documentation
-          </a>
-        </div>
-      </main>
+      ) : null}
+
+      <CartBar count={cartCount(lines)} total={cartTotal(lines)} onOpen={() => setIsCartOpen(true)} />
+
+      {isCartOpen ? (
+        <CartDrawer
+          lines={lines}
+          onClose={() => setIsCartOpen(false)}
+          onUpdateQuantity={updateQuantity}
+          onRemove={removeLine}
+          onCheckout={() => {
+            setIsCartOpen(false);
+            setView("checkout");
+          }}
+        />
+      ) : null}
     </div>
   );
 }
