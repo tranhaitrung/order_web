@@ -43,6 +43,7 @@ export const CATEGORIES: Category[] = [
 export const TOPPINGS: Topping[] = [
   { id: "nha-dam", name: "Nha đam", price: 5000 },
   { id: "tran-chau-trang", name: "Trân châu trắng", price: 5000 },
+  { id: "tran-chau-đen", name: "Trân châu đen", price: 7000 },
 ];
 
 export const MENU_ITEMS: MenuItem[] = [
