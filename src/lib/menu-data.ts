@@ -21,7 +21,7 @@ export interface MenuItem {
 
 export const SHOP = {
   name: "IT HOUSE",
-  tagline: "Trà & Trà Sữa",
+  tagline: "Tea ❤️ Coffee",
   claims: ["Nguyên liệu chọn lọc", "Thơm ngon – thanh mát", "Tự nhiên – tốt cho sức khỏe"],
   zaloPhone: "0358260822",
   contactPhone: "0358260822",
