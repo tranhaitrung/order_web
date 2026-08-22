@@ -1,0 +1,38 @@
+services:
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      target: runner
+    image: ${APP_IMAGE:-wedding-system:latest}
+    container_name: wedding-system
+    restart: unless-stopped
+    env_file:
+      - .env
+    environment:
+      GOOGLE_APPLICATION_CREDENTIALS: /app/secrets/gcs-service-account.json
+    volumes:
+      - ./secrets/gcs-service-account.json:/app/secrets/gcs-service-account.json:ro
+    ports:
+      - "3000:3000"
+    networks:
+      - wedding-network
+
+  tools:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      target: tools
+    image: ${APP_TOOLS_IMAGE:-wedding-system-tools:latest}
+    env_file:
+      - .env
+    environment:
+      GOOGLE_APPLICATION_CREDENTIALS: /app/secrets/gcs-service-account.json
+    volumes:
+      - ./secrets/gcs-service-account.json:/app/secrets/gcs-service-account.json:ro
+    networks:
+      - wedding-network
+
+networks:
+  wedding-network:
+    driver: bridge
