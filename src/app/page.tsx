@@ -110,8 +110,10 @@ export default function Home() {
   return (
     <div className="pb-4">
       <BrandHeader />
-      <div className="sticky top-0 z-20 bg-bg/95 backdrop-blur-sm">
-        <CategoryTabs active={activeCategory} onSelect={scrollToCategory} />
+      <div className="sticky top-0 z-20 -mt-7 px-4">
+        <div className="mx-auto max-w-md rounded-full border border-line bg-surface/95 shadow-[var(--shadow-float)] backdrop-blur-sm">
+          <CategoryTabs active={activeCategory} onSelect={scrollToCategory} />
+        </div>
       </div>
       <MenuSections onSelect={setActiveItem} />
 

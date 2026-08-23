@@ -1,3 +1,4 @@
+import Image from "next/image";
 import { SHOP } from "@/lib/menu-data";
 import { Button } from "@/components/ui/Button";
 
@@ -11,6 +12,7 @@ export function ErrorView({ message, onRetry }: ErrorViewProps) {
 
   return (
     <div className="mx-auto flex min-h-dvh w-full max-w-md flex-col items-center justify-center px-6 text-center">
+      <Image src="/logo.png" alt="IT HOUSE" width={612} height={408} priority className="mb-6 h-12 w-auto" />
       <span
         aria-hidden
         className="flex h-16 w-16 items-center justify-center rounded-full bg-error-soft text-3xl text-error"

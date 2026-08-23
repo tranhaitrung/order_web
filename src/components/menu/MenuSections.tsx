@@ -23,9 +23,14 @@ export function MenuSections({ onSelect }: MenuSectionsProps) {
           className="px-4 pt-5"
         >
           <h2 className="font-display text-lg font-semibold text-ink">{category.label}</h2>
-          <div className="mt-3 grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4">
+          <div className="mt-3 flex flex-wrap justify-center gap-2">
             {itemsByCategory(category.id).map((item) => (
-              <MenuItemCard key={item.id} item={item} onSelect={onSelect} />
+              <div
+                key={item.id}
+                className="w-[calc(25%-0.375rem)] sm:w-[calc(16.6667%-0.4167rem)] lg:w-[calc(12.5%-0.4375rem)]"
+              >
+                <MenuItemCard item={item} onSelect={onSelect} />
+              </div>
             ))}
           </div>
         </section>

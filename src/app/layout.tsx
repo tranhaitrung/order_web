@@ -15,9 +15,28 @@ const beVietnamPro = Be_Vietnam_Pro({
   weight: ["400", "500", "600", "700"],
 });
 
+const TITLE = "IT HOUSE — Đặt món trà & trà sữa";
+const DESCRIPTION = "Chọn món, để lại số điện thoại — IT HOUSE nhận đơn và liên hệ xác nhận ngay.";
+
 export const metadata: Metadata = {
-  title: "IT HOUSE — Đặt món trà & trà sữa",
-  description: "Chọn món, để lại số điện thoại — IT HOUSE nhận đơn và liên hệ xác nhận ngay.",
+  metadataBase: new URL("https://order.trungtam.io.vn"),
+  title: TITLE,
+  description: DESCRIPTION,
+  openGraph: {
+    title: TITLE,
+    description: DESCRIPTION,
+    url: "/",
+    siteName: "IT HOUSE",
+    images: [{ url: "/preview-web.jpeg", width: 1280, height: 672, alt: TITLE }],
+    locale: "vi_VN",
+    type: "website",
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: TITLE,
+    description: DESCRIPTION,
+    images: ["/preview-web.jpeg"],
+  },
 };
 
 export const viewport: Viewport = {

@@ -1,3 +1,4 @@
+import Image from "next/image";
 import { CartLine, cartTotal } from "@/hooks/useCartStore";
 import { formatVnd } from "@/lib/format";
 import { Button } from "@/components/ui/Button";
@@ -24,9 +25,12 @@ export function CartDrawer({ lines, onClose, onUpdateQuantity, onRemove, onCheck
         className="relative z-10 flex max-h-[85vh] w-full max-w-md flex-col rounded-t-[var(--radius-lg)] bg-surface p-6 pb-[max(1.5rem,env(safe-area-inset-bottom))] shadow-[var(--shadow-float)] animate-[slide-up_var(--duration-normal)_var(--ease-out-expo)] sm:rounded-[var(--radius-lg)]"
       >
         <div className="flex items-center justify-between">
-          <h2 id="cart-drawer-title" className="font-display text-xl font-semibold text-ink">
-            Giỏ hàng
-          </h2>
+          <div className="flex items-center gap-2">
+            <Image src="/logo.png" alt="" aria-hidden width={612} height={408} priority className="h-7 w-auto" />
+            <h2 id="cart-drawer-title" className="font-display text-xl font-semibold text-ink">
+              Giỏ hàng
+            </h2>
+          </div>
           <button
             onClick={onClose}
             aria-label="Đóng"

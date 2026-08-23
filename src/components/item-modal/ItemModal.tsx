@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import Image from "next/image";
 import {
   DEFAULT_SUGAR_ICE_LEVEL,
   MenuItem,
@@ -92,6 +93,26 @@ export function ItemModal({ item, onClose, onAddToCart }: ItemModalProps) {
         aria-labelledby="item-modal-title"
         className="relative z-10 flex max-h-[88vh] w-full max-w-md flex-col rounded-t-[var(--radius-lg)] bg-surface shadow-[var(--shadow-float)] animate-[slide-up_var(--duration-normal)_var(--ease-out-expo)] sm:rounded-[var(--radius-lg)]"
       >
+        <div className="relative shrink-0">
+          <div className="flex h-64 w-full items-center justify-center overflow-hidden rounded-t-[var(--radius-lg)] bg-surface-alt">
+            <Image
+              src={item.imageSrc}
+              alt={item.name}
+              width={1152}
+              height={805}
+              loading="lazy"
+              className="h-full w-full object-contain"
+            />
+          </div>
+          <button
+            onClick={onClose}
+            aria-label="Đóng"
+            className="absolute right-4 top-4 rounded-full bg-surface/90 p-2 text-ink-soft shadow-sm backdrop-blur-sm transition-colors hover:bg-primary-soft hover:text-primary"
+          >
+            ✕
+          </button>
+        </div>
+
         <div className="flex shrink-0 items-start justify-between gap-4 p-6 pb-4">
           <div>
             <h2 id="item-modal-title" className="font-display text-xl font-semibold text-ink">
@@ -99,13 +120,6 @@ export function ItemModal({ item, onClose, onAddToCart }: ItemModalProps) {
             </h2>
             <p className="mt-1 text-sm font-semibold text-primary">{formatVnd(item.price)}</p>
           </div>
-          <button
-            onClick={onClose}
-            aria-label="Đóng"
-            className="rounded-full p-2 text-ink-soft transition-colors hover:bg-primary-soft hover:text-primary"
-          >
-            ✕
-          </button>
         </div>
 
         <div className="flex-1 space-y-5 overflow-y-auto px-6">

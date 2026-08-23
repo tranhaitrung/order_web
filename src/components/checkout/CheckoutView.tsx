@@ -1,6 +1,7 @@
 "use client";
 
 import { FormEvent, useMemo, useState } from "react";
+import Image from "next/image";
 import { CartLine, cartTotal, lineTotal } from "@/hooks/useCartStore";
 import {
   buildDeliveryDateOptions,
@@ -69,6 +70,10 @@ export function CheckoutView({ lines, onBack, onSubmit, submitting }: CheckoutVi
 
   return (
     <div className="mx-auto flex min-h-dvh w-full max-w-md flex-col px-4 pb-8 pt-6">
+      <div className="mb-4 flex justify-center">
+        <Image src="/logo.png" alt="IT HOUSE" width={612} height={408} priority className="h-10 w-auto" />
+      </div>
+
       <button
         onClick={onBack}
         className="mb-4 flex w-fit items-center gap-1 text-sm font-semibold text-ink-soft hover:text-primary"

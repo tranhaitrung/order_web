@@ -1,3 +1,4 @@
+import Image from "next/image";
 import { Button } from "@/components/ui/Button";
 
 interface ConfirmationViewProps {
@@ -7,6 +8,7 @@ interface ConfirmationViewProps {
 export function ConfirmationView({ onOrderMore }: ConfirmationViewProps) {
   return (
     <div className="mx-auto flex min-h-dvh w-full max-w-md flex-col items-center justify-center px-6 text-center">
+      <Image src="/logo.png" alt="IT HOUSE" width={612} height={408} priority className="mb-6 h-12 w-auto" />
       <span
         aria-hidden
         className="flex h-16 w-16 items-center justify-center rounded-full bg-primary-soft text-3xl text-primary"

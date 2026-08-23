@@ -1,3 +1,4 @@
+import Image from "next/image";
 import { MenuItem } from "@/lib/menu-data";
 import { formatVnd } from "@/lib/format";
 
@@ -8,20 +9,54 @@ interface MenuItemCardProps {
 
 export function MenuItemCard({ item, onSelect }: MenuItemCardProps) {
   return (
-    <button
+    <div
+      role="button"
+      tabIndex={0}
       onClick={() => onSelect(item)}
-      className="group relative flex flex-col items-start gap-1 rounded-[var(--radius-md)] border border-line bg-surface p-4 text-left shadow-[var(--shadow-card)] transition-transform duration-150 hover:-translate-y-0.5 active:translate-y-0 active:scale-[0.99]"
+      onKeyDown={(e) => {
+        if (e.key === "Enter" || e.key === " ") {
+          e.preventDefault();
+          onSelect(item);
+        }
+      }}
+      className="group relative aspect-[3/4] cursor-pointer overflow-hidden rounded-[var(--radius-sm)] bg-surface-alt shadow-[var(--shadow-card)] transition-transform duration-150 hover:-translate-y-0.5 active:translate-y-0 active:scale-[0.99]"
     >
+      <Image
+        src={item.imageSrc}
+        alt={item.name}
+        width={1152}
+        height={805}
+        loading="lazy"
+        className="h-full w-full object-cover transition-transform duration-300 group-hover:scale-105"
+      />
+
+      <div className="absolute inset-x-0 bottom-0 h-3/5 bg-linear-to-t from-ink/95 via-ink/45 to-transparent" />
+
       {item.mustTry ? (
-        <span className="absolute -top-2 right-3 rounded-full bg-accent-gold px-2.5 py-0.5 text-xs font-bold text-accent-gold-ink shadow-sm">
+        <span className="absolute left-1 top-1 rounded-full bg-accent-gold px-1.5 py-0.5 text-[8px] font-bold leading-none text-accent-gold-ink shadow-sm">
           Must Try
         </span>
       ) : null}
-      <span className="font-display text-lg font-semibold leading-snug text-ink">{item.name}</span>
-      <span className="text-sm font-semibold text-primary">{formatVnd(item.price)}</span>
-      <span className="mt-2 text-xs font-medium text-ink-soft opacity-0 transition-opacity duration-150 group-hover:opacity-100">
-        Chạm để chọn topping →
-      </span>
-    </button>
+
+      <div className="absolute inset-x-0 bottom-0 py-1 pl-1.5 pr-7">
+        <span className="line-clamp-2 font-display text-[10.5px] font-semibold leading-[1.15] text-white">
+          {item.name}
+        </span>
+        <span className="mt-0.5 block text-[10px] font-semibold text-white/95">{formatVnd(item.price)}</span>
+      </div>
+
+      <button
+        onClick={(e) => {
+          e.stopPropagation();
+          onSelect(item);
+        }}
+        aria-label={`Chọn ${item.name}`}
+        className="absolute bottom-1 right-1 flex h-6 w-6 items-center justify-center rounded-full bg-primary text-white shadow-md transition-transform duration-150 hover:bg-primary-dark active:scale-90"
+      >
+        <svg viewBox="0 0 24 24" className="h-3.5 w-3.5" fill="none" stroke="currentColor" strokeWidth={2.5}>
+          <path d="M12 5v14M5 12h14" strokeLinecap="round" />
+        </svg>
+      </button>
+    </div>
   );
 }

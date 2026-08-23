@@ -17,6 +17,7 @@ export interface MenuItem {
   price: number;
   category: CategoryId;
   mustTry?: boolean;
+  imageSrc: string;
 }
 
 export const SHOP = {
@@ -47,15 +48,80 @@ export const TOPPINGS: Topping[] = [
 ];
 
 export const MENU_ITEMS: MenuItem[] = [
-  { id: "tra-sua-thai-xanh", name: "Trà sữa Thái xanh", price: 20000, category: "tra-tra-sua", mustTry: true },
-  { id: "tra-sua-truyen-thong", name: "Trà sữa truyền thống", price: 25000, category: "tra-tra-sua" },
-  { id: "tra-tac", name: "Trà tắc", price: 15000, category: "tra-tra-sua" },
-  { id: "tra-chanh", name: "Trà chanh", price: 15000, category: "tra-tra-sua", mustTry: true },
-  { id: "matcha-latte", name: "Matcha Latte", price: 30000, category: "tra-tra-sua" },
-  { id: "cold-brew", name: "Cold Brew", price: 30000, category: "cafe" },
-  { id: "cold-brew-chanh-vang", name: "Cold Brew chanh vàng", price: 35000, category: "cafe", mustTry: true },
-  { id: "cafe-muoi", name: "Café muối", price: 30000, category: "cafe", mustTry: true },
-  { id: "cafe-sua", name: "Café sữa", price: 25000, category: "cafe" },
+  {
+    id: "tra-sua-thai-xanh",
+    name: "Trà sữa Thái xanh",
+    price: 20000,
+    category: "tra-tra-sua",
+    mustTry: true,
+    imageSrc: "/menu/tra-thai-xanh.jpeg",
+  },
+  {
+    id: "tra-sua-truyen-thong",
+    name: "Trà sữa truyền thống",
+    price: 25000,
+    category: "tra-tra-sua",
+    imageSrc: "/menu/tra-sua.jpeg",
+  },
+  {
+    id: "tra-tac",
+    name: "Trà tắc",
+    price: 15000,
+    category: "tra-tra-sua",
+    imageSrc: "/menu/tra-tac.jpeg",
+  },
+  {
+    id: "tra-chanh",
+    name: "Trà chanh",
+    price: 15000,
+    category: "tra-tra-sua",
+    mustTry: true,
+    imageSrc: "/menu/tra-chanh.jpeg",
+  },
+  {
+    id: "matcha-latte",
+    name: "Matcha Latte",
+    price: 30000,
+    category: "tra-tra-sua",
+    imageSrc: "/menu/matcha-latte.jpeg",
+  },
+  {
+    id: "cold-brew",
+    name: "Cold Brew",
+    price: 30000,
+    category: "cafe",
+    imageSrc: "/menu/cold-brew.jpeg",
+  },
+  {
+    id: "cold-brew-chanh-vang",
+    name: "Cold Brew chanh vàng",
+    price: 35000,
+    category: "cafe",
+    mustTry: true,
+    imageSrc: "/menu/cold-brew-chanh-vang.jpeg",
+  },
+  {
+    id: "cafe-muoi",
+    name: "Café muối",
+    price: 30000,
+    category: "cafe",
+    mustTry: true,
+    imageSrc: "/menu/cafe-muoi.jpeg",
+  },
+  {
+    id: "cafe-sua",
+    name: "Café sữa",
+    price: 25000,
+    category: "cafe",
+    imageSrc: "/menu/cafe-sua.jpeg",
+  },
+  {
+    id: "bac-xiu",
+    name: "Bạc Xỉu",
+    price: 25000,
+    category: "cafe",
+    imageSrc: "/menu/bac-xiu.jpeg",
+  },
 ];
 
 export function getMenuItem(id: string): MenuItem | undefined {
