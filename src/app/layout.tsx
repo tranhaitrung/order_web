@@ -15,7 +15,7 @@ const beVietnamPro = Be_Vietnam_Pro({
   weight: ["400", "500", "600", "700"],
 });
 
-const TITLE = "IT HOUSE — Đặt món trà & trà sữa";
+const TITLE = "IT HOUSE — Đặt trà & cà phê";
 const DESCRIPTION = "Chọn món, để lại số điện thoại — IT HOUSE nhận đơn và liên hệ xác nhận ngay.";
 
 export const metadata: Metadata = {
