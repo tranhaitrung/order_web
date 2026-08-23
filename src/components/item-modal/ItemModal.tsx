@@ -2,13 +2,8 @@
 
 import { useState } from "react";
 import Image from "next/image";
-import {
-  DEFAULT_SUGAR_ICE_LEVEL,
-  MenuItem,
-  SUGAR_ICE_LEVELS,
-  SugarIceLevel,
-  TOPPINGS,
-} from "@/lib/menu-data";
+import { DEFAULT_SUGAR_ICE_LEVEL, MenuItem, SUGAR_ICE_LEVELS, SugarIceLevel } from "@/lib/menu-data";
+import { useMenuData } from "@/hooks/useMenuData";
 import { formatVnd } from "@/lib/format";
 import { Button } from "@/components/ui/Button";
 import { cn } from "@/lib/cn";
@@ -64,6 +59,7 @@ function LevelPicker({
 }
 
 export function ItemModal({ item, onClose, onAddToCart }: ItemModalProps) {
+  const { toppings } = useMenuData();
   const [quantity, setQuantity] = useState(1);
   const [toppingIds, setToppingIds] = useState<string[]>([]);
   const [sugarLevel, setSugarLevel] = useState<SugarIceLevel>(DEFAULT_SUGAR_ICE_LEVEL);
@@ -71,7 +67,7 @@ export function ItemModal({ item, onClose, onAddToCart }: ItemModalProps) {
   const [note, setNote] = useState("");
 
   const toppingsPrice = toppingIds.reduce(
-    (sum, id) => sum + (TOPPINGS.find((t) => t.id === id)?.price ?? 0),
+    (sum, id) => sum + (toppings.find((t) => t.id === id)?.price ?? 0),
     0,
   );
   const subtotal = (item.price + toppingsPrice) * quantity;
@@ -126,7 +122,7 @@ export function ItemModal({ item, onClose, onAddToCart }: ItemModalProps) {
           <div>
             <p className="text-sm font-semibold text-ink">Topping</p>
             <div className="mt-2 flex flex-col gap-2">
-              {TOPPINGS.map((topping) => (
+              {toppings.map((topping) => (
                 <label
                   key={topping.id}
                   className={cn(

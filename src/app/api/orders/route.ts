@@ -1,19 +1,26 @@
 import { NextRequest, NextResponse } from "next/server";
 import { formatDeliveryDateForMessage, isDeliverySlotAvailable, nowInVietnam } from "@/lib/delivery";
-import { deliverySlotLabel, getMenuItem, getTopping, SHOP, sugarIceLabel } from "@/lib/menu-data";
+import { getClientIp } from "@/lib/http";
+import { deliverySlotLabel, sugarIceLabel } from "@/lib/menu-data";
+import { findMenuItemsByIds, findToppingsByIds } from "@/lib/menu-repository";
+import { createOrder, type CreateOrderItemInput } from "@/lib/order-repository";
 import { checkRateLimit } from "@/lib/rate-limit";
+import { getStoreStatus, isEffectivelyClosed } from "@/lib/store-status-repository";
 import { formatOrderMessage, sendTelegramMessageWithRetry, type OrderLineSummary } from "@/lib/telegram";
 import { orderSchema } from "@/lib/validation";
 
-function getClientIp(request: NextRequest): string {
-  const forwardedFor = request.headers.get("x-forwarded-for");
-  return forwardedFor?.split(",")[0]?.trim() ?? "unknown";
-}
+const DEFAULT_CLOSED_MESSAGE = "Cửa hàng hiện đang tạm ngừng nhận đơn, vui lòng quay lại sau.";
 
 export async function POST(request: NextRequest) {
   const ip = getClientIp(request);
   if (!checkRateLimit(ip)) {
     return NextResponse.json({ message: "Quá nhiều yêu cầu, vui lòng thử lại sau" }, { status: 429 });
+  }
+
+  const storeStatus = await getStoreStatus();
+  if (isEffectivelyClosed(storeStatus)) {
+    const message = storeStatus.closedNote || DEFAULT_CLOSED_MESSAGE;
+    return NextResponse.json({ message }, { status: 422 });
   }
 
   const rawBody = await request.json().catch(() => null);
@@ -34,44 +41,83 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ errors: { deliverySlot: message }, message }, { status: 422 });
   }
 
-  const lines: OrderLineSummary[] = [];
+  const itemIds = [...new Set(items.map((line) => line.itemId))];
+  const toppingIds = [...new Set(items.flatMap((line) => line.toppingIds))];
+  const [itemsById, toppingsById] = await Promise.all([
+    findMenuItemsByIds(itemIds),
+    findToppingsByIds(toppingIds),
+  ]);
+
+  const summaryLines: OrderLineSummary[] = [];
+  const orderItems: CreateOrderItemInput[] = [];
   let total = 0;
 
   for (const line of items) {
-    const menuItem = getMenuItem(line.itemId);
+    const menuItem = itemsById.get(line.itemId);
     if (!menuItem) {
       return NextResponse.json(
-        { errors: { items: `Món không tồn tại hoặc đã ngừng bán: ${line.itemId}` } },
+        { errors: { items: `Món không tồn tại, đã ngừng bán, hoặc đã hết hàng: ${line.itemId}` } },
         { status: 422 },
       );
     }
 
-    const toppingNames: string[] = [];
+    const toppings: { id: string; name: string; price: number }[] = [];
     let toppingsPrice = 0;
     for (const toppingId of line.toppingIds) {
-      const topping = getTopping(toppingId);
+      const topping = toppingsById.get(toppingId);
       if (!topping) {
         return NextResponse.json(
           { errors: { items: `Topping không tồn tại: ${toppingId}` } },
           { status: 422 },
         );
       }
-      toppingNames.push(topping.name);
+      toppings.push(topping);
       toppingsPrice += topping.price;
     }
 
-    const lineTotal = (menuItem.price + toppingsPrice) * line.quantity;
-    total += lineTotal;
+    const lineTotalAmount = (menuItem.price + toppingsPrice) * line.quantity;
+    total += lineTotalAmount;
 
-    lines.push({
+    summaryLines.push({
       name: menuItem.name,
       quantity: line.quantity,
-      toppingNames,
+      toppingNames: toppings.map((t) => t.name),
       sugarLabel: sugarIceLabel(line.sugarLevel),
       iceLabel: sugarIceLabel(line.iceLevel),
       note: line.note,
-      lineTotal,
+      lineTotal: lineTotalAmount,
     });
+
+    orderItems.push({
+      itemId: menuItem.id,
+      itemName: menuItem.name,
+      quantity: line.quantity,
+      sugarLevel: line.sugarLevel,
+      iceLevel: line.iceLevel,
+      note: line.note,
+      toppings,
+      lineTotal: lineTotalAmount,
+    });
+  }
+
+  let orderId: string;
+  try {
+    const created = await createOrder({
+      customerName,
+      customerPhone,
+      deliveryAddress,
+      deliveryDate,
+      deliverySlot,
+      total,
+      items: orderItems,
+    });
+    orderId = created.id;
+  } catch (error) {
+    console.error("[orders] Lưu đơn hàng vào database thất bại", error);
+    return NextResponse.json(
+      { message: "Không thể lưu đơn hàng, vui lòng thử lại sau." },
+      { status: 500 },
+    );
   }
 
   const orderSummary = {
@@ -80,7 +126,7 @@ export async function POST(request: NextRequest) {
     deliveryAddress,
     deliveryDateLabel: formatDeliveryDateForMessage(deliveryDate, serverNow),
     deliverySlotLabel: deliverySlotLabel(deliverySlot),
-    lines,
+    lines: summaryLines,
     total,
   };
   const message = formatOrderMessage(orderSummary);
@@ -88,14 +134,9 @@ export async function POST(request: NextRequest) {
   try {
     await sendTelegramMessageWithRetry(message);
   } catch (error) {
-    console.error("[orders] Telegram send failed after retries", error);
-    return NextResponse.json(
-      {
-        message: `Không gửi được đơn hàng, vui lòng liên hệ trực tiếp qua Zalo ${SHOP.zaloPhone}`,
-      },
-      { status: 502 },
-    );
+    // Đơn hàng đã lưu vào database — Telegram chỉ là kênh thông báo, không chặn đơn hàng.
+    console.error(`[orders] Gửi Telegram thất bại cho đơn ${orderId}, cần kiểm tra thủ công`, error);
   }
 
-  return NextResponse.json({ order_summary: orderSummary, telegram_sent: true }, { status: 200 });
+  return NextResponse.json({ orderId, order_summary: orderSummary }, { status: 200 });
 }

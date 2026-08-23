@@ -1,5 +1,8 @@
+"use client";
+
 import { CartLine, lineTotal, lineUnitPrice } from "@/hooks/useCartStore";
-import { getMenuItem, getTopping, sugarIceLabel } from "@/lib/menu-data";
+import { useMenuData } from "@/hooks/useMenuData";
+import { sugarIceLabel } from "@/lib/menu-data";
 import { formatVnd } from "@/lib/format";
 
 interface CartItemRowProps {
@@ -9,11 +12,12 @@ interface CartItemRowProps {
 }
 
 export function CartItemRow({ line, onUpdateQuantity, onRemove }: CartItemRowProps) {
-  const item = getMenuItem(line.itemId);
+  const { itemsById, toppingsById } = useMenuData();
+  const item = itemsById.get(line.itemId);
   if (!item) return null;
 
   const toppingNames = line.toppingIds
-    .map((id) => getTopping(id)?.name)
+    .map((id) => toppingsById.get(id)?.name)
     .filter((name): name is string => Boolean(name));
 
   return (
@@ -27,7 +31,9 @@ export function CartItemRow({ line, onUpdateQuantity, onRemove }: CartItemRowPro
           Đường: {sugarIceLabel(line.sugarLevel)} · Đá: {sugarIceLabel(line.iceLevel)}
         </p>
         {line.note ? <p className="mt-0.5 text-xs italic text-ink-soft">📝 {line.note}</p> : null}
-        <p className="mt-1 text-xs text-ink-soft">{formatVnd(lineUnitPrice(line))} / phần</p>
+        <p className="mt-1 text-xs text-ink-soft">
+          {formatVnd(lineUnitPrice(line, itemsById, toppingsById))} / phần
+        </p>
         <button
           onClick={() => onRemove(line.id)}
           className="mt-2 text-xs font-semibold text-error underline-offset-2 hover:underline"
@@ -53,7 +59,7 @@ export function CartItemRow({ line, onUpdateQuantity, onRemove }: CartItemRowPro
             +
           </button>
         </div>
-        <p className="text-sm font-bold text-ink">{formatVnd(lineTotal(line))}</p>
+        <p className="text-sm font-bold text-ink">{formatVnd(lineTotal(line, itemsById, toppingsById))}</p>
       </div>
     </div>
   );

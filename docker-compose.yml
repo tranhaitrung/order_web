@@ -13,6 +13,7 @@ services:
 
     environment:
       GOOGLE_APPLICATION_CREDENTIALS: /app/secrets/gcs-service-account.json
+      DATABASE_URL: postgresql://postgres:postgres@db:5432/it_house_ordering
 
     volumes:
       - ./secrets/gcs-service-account.json:/app/secrets/gcs-service-account.json:ro
@@ -20,9 +21,41 @@ services:
     ports:
       - "3000:3000"
 
+    depends_on:
+      db:
+        condition: service_healthy
+
+    networks:
+      - order-network
+
+  db:
+    image: postgres:16-alpine
+    container_name: order-db
+    restart: unless-stopped
+
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: it_house_ordering
+
+    volumes:
+      - db-data:/var/lib/postgresql/data
+
+    ports:
+      - "5433:5432"
+
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
     networks:
       - order-network
 
 networks:
   order-network:
     driver: bridge
+
+volumes:
+  db-data:

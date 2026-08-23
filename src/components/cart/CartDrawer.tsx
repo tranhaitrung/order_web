@@ -1,19 +1,33 @@
+"use client";
+
 import Image from "next/image";
 import { CartLine, cartTotal } from "@/hooks/useCartStore";
+import { useMenuData } from "@/hooks/useMenuData";
 import { formatVnd } from "@/lib/format";
 import { Button } from "@/components/ui/Button";
 import { CartItemRow } from "@/components/cart/CartItemRow";
 
 interface CartDrawerProps {
   lines: CartLine[];
+  checkoutDisabled?: boolean;
+  checkoutDisabledMessage?: string;
   onClose: () => void;
   onUpdateQuantity: (id: string, quantity: number) => void;
   onRemove: (id: string) => void;
   onCheckout: () => void;
 }
 
-export function CartDrawer({ lines, onClose, onUpdateQuantity, onRemove, onCheckout }: CartDrawerProps) {
-  const total = cartTotal(lines);
+export function CartDrawer({
+  lines,
+  checkoutDisabled,
+  checkoutDisabledMessage,
+  onClose,
+  onUpdateQuantity,
+  onRemove,
+  onCheckout,
+}: CartDrawerProps) {
+  const { itemsById, toppingsById } = useMenuData();
+  const total = cartTotal(lines, itemsById, toppingsById);
 
   return (
     <div className="fixed inset-0 z-40 flex items-end justify-center">
@@ -55,7 +69,11 @@ export function CartDrawer({ lines, onClose, onUpdateQuantity, onRemove, onCheck
           <span className="font-display text-xl font-bold text-primary">{formatVnd(total)}</span>
         </div>
 
-        <Button className="mt-4 w-full" disabled={lines.length === 0} onClick={onCheckout}>
+        {checkoutDisabled && checkoutDisabledMessage ? (
+          <p className="mt-3 text-center text-xs font-medium text-error">{checkoutDisabledMessage}</p>
+        ) : null}
+
+        <Button className="mt-4 w-full" disabled={lines.length === 0 || checkoutDisabled} onClick={onCheckout}>
           Đặt hàng
         </Button>
       </div>

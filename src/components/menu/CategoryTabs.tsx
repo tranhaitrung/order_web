@@ -1,4 +1,7 @@
-import { CATEGORIES, CategoryId } from "@/lib/menu-data";
+"use client";
+
+import { CategoryId } from "@/lib/menu-data";
+import { useMenuData } from "@/hooks/useMenuData";
 import { cn } from "@/lib/cn";
 
 interface CategoryTabsProps {
@@ -7,13 +10,15 @@ interface CategoryTabsProps {
 }
 
 export function CategoryTabs({ active, onSelect }: CategoryTabsProps) {
+  const { categories } = useMenuData();
+
   return (
     <div
       role="tablist"
       aria-label="Danh mục món"
       className="flex gap-2 overflow-x-auto px-4 py-3 sm:justify-center"
     >
-      {CATEGORIES.map((category) => {
+      {categories.map((category) => {
         const isActive = category.id === active;
         return (
           <button

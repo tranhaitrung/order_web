@@ -1,10 +1,11 @@
 import { DeliverySlotId } from "@/lib/menu-data";
 
 const VN_TIMEZONE = "Asia/Ho_Chi_Minh";
+const VN_UTC_OFFSET_HOURS = 7;
 const DATE_OPTIONS_COUNT = 7;
 
 /** Slot cutoff = its start time. Same day, after this time, the slot can no longer be booked. */
-const DELIVERY_SLOT_START: Record<DeliverySlotId, { hour: number; minute: number }> = {
+export const DELIVERY_SLOT_START: Record<DeliverySlotId, { hour: number; minute: number }> = {
   morning: { hour: 8, minute: 0 },
   afternoon: { hour: 13, minute: 0 },
 };
@@ -126,4 +127,65 @@ export function formatDeliveryDateForMessage(dateKey: string, referenceNow: Date
   if (dateKey === todayKey) return `Hôm nay (${dmy})`;
   if (dateKey === tomorrowKey) return `Ngày mai (${dmy})`;
   return `${WEEKDAY_LABELS[date.getDay()]}, ${dmy}`;
+}
+
+/**
+ * Converts Vietnam wall-clock components to the real UTC instant they represent.
+ * Vietnam has no DST, so the offset is a constant +7h.
+ */
+function vnWallTimeToUtc(year: number, month: number, day: number, hour: number, minute: number): Date {
+  return new Date(Date.UTC(year, month, day, hour - VN_UTC_OFFSET_HOURS, minute));
+}
+
+export type ClosedScope = "shift" | "day" | "permanent" | "range";
+
+/**
+ * When a "close orders for this shift/day" action should automatically lift.
+ * `referenceNow` must come from `nowInVietnam()` (local getters = VN time) — never a real Date.
+ * Returns null for "permanent" (no auto reopen). "range" has an admin-provided end instead — see
+ * `parseVnDateTimeLocal`, not this function.
+ */
+export function computeClosedUntil(
+  scope: Exclude<ClosedScope, "range">,
+  referenceNow: Date = nowInVietnam(),
+): Date | null {
+  if (scope === "permanent") return null;
+
+  if (scope === "day") {
+    return vnWallTimeToUtc(referenceNow.getFullYear(), referenceNow.getMonth(), referenceNow.getDate() + 1, 0, 0);
+  }
+
+  const afternoon = DELIVERY_SLOT_START.afternoon;
+  const morning = DELIVERY_SLOT_START.morning;
+  const isBeforeAfternoonShift =
+    referenceNow.getHours() < afternoon.hour ||
+    (referenceNow.getHours() === afternoon.hour && referenceNow.getMinutes() < afternoon.minute);
+
+  if (isBeforeAfternoonShift) {
+    return vnWallTimeToUtc(
+      referenceNow.getFullYear(),
+      referenceNow.getMonth(),
+      referenceNow.getDate(),
+      afternoon.hour,
+      afternoon.minute,
+    );
+  }
+
+  return vnWallTimeToUtc(
+    referenceNow.getFullYear(),
+    referenceNow.getMonth(),
+    referenceNow.getDate() + 1,
+    morning.hour,
+    morning.minute,
+  );
+}
+
+const DATETIME_LOCAL_REGEX = /^(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2})$/;
+
+/** Parses a `<input type="datetime-local">` value (e.g. "2026-01-01T00:00") as Vietnam wall-clock time. */
+export function parseVnDateTimeLocal(value: string): Date | null {
+  const match = DATETIME_LOCAL_REGEX.exec(value);
+  if (!match) return null;
+  const [, year, month, day, hour, minute] = match;
+  return vnWallTimeToUtc(Number(year), Number(month) - 1, Number(day), Number(hour), Number(minute));
 }

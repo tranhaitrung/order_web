@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { SHOP } from "@/lib/menu-data";
 
 export function ContactFooter() {
@@ -13,6 +14,9 @@ export function ContactFooter() {
           {SHOP.contactEmail}
         </a>
       </p>
+      <Link href="/tra-cuu-don-hang" className="mt-3 inline-block text-sm font-semibold text-primary hover:underline">
+        Tra cứu đơn hàng của tôi
+      </Link>
     </footer>
   );
 }

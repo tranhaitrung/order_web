@@ -16,6 +16,22 @@ bun dev
 
 Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
 
+## Database
+
+The product menu and orders are stored in PostgreSQL. For local development:
+
+```bash
+docker compose up -d db          # start Postgres on localhost:5433
+cp .env.local.example .env.local # then fill in TELEGRAM_* and DATABASE_URL
+npm run db:migrate               # create tables
+npm run db:seed                  # load the menu
+```
+
+## Admin
+
+`/admin` (order-by-day view + revenue stats) is protected by HTTP Basic Auth. Set `ADMIN_USERNAME` and
+`ADMIN_PASSWORD` in your env — required in every environment, or the admin routes reject all requests.
+
 You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
 
 This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.

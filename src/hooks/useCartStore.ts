@@ -1,5 +1,5 @@
 import { create } from "zustand";
-import { DEFAULT_SUGAR_ICE_LEVEL, getMenuItem, getTopping, SugarIceLevel } from "@/lib/menu-data";
+import { DEFAULT_SUGAR_ICE_LEVEL, MenuItem, SugarIceLevel, Topping } from "@/lib/menu-data";
 
 export interface CartLine {
   id: string;
@@ -41,19 +41,31 @@ export const DEFAULT_CART_MODIFIERS = {
   iceLevel: DEFAULT_SUGAR_ICE_LEVEL,
 };
 
-export function lineUnitPrice(line: CartLine): number {
-  const item = getMenuItem(line.itemId);
+export function lineUnitPrice(
+  line: CartLine,
+  itemsById: Map<string, MenuItem>,
+  toppingsById: Map<string, Topping>,
+): number {
+  const item = itemsById.get(line.itemId);
   if (!item) return 0;
-  const toppingsPrice = line.toppingIds.reduce((sum, id) => sum + (getTopping(id)?.price ?? 0), 0);
+  const toppingsPrice = line.toppingIds.reduce((sum, id) => sum + (toppingsById.get(id)?.price ?? 0), 0);
   return item.price + toppingsPrice;
 }
 
-export function lineTotal(line: CartLine): number {
-  return lineUnitPrice(line) * line.quantity;
+export function lineTotal(
+  line: CartLine,
+  itemsById: Map<string, MenuItem>,
+  toppingsById: Map<string, Topping>,
+): number {
+  return lineUnitPrice(line, itemsById, toppingsById) * line.quantity;
 }
 
-export function cartTotal(lines: CartLine[]): number {
-  return lines.reduce((sum, line) => sum + lineTotal(line), 0);
+export function cartTotal(
+  lines: CartLine[],
+  itemsById: Map<string, MenuItem>,
+  toppingsById: Map<string, Topping>,
+): number {
+  return lines.reduce((sum, line) => sum + lineTotal(line, itemsById, toppingsById), 0);
 }
 
 export function cartCount(lines: CartLine[]): number {

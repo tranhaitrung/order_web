@@ -1,4 +1,7 @@
-import { CATEGORIES, itemsByCategory, MenuItem } from "@/lib/menu-data";
+"use client";
+
+import { MenuItem } from "@/lib/menu-data";
+import { useMenuData } from "@/hooks/useMenuData";
 import { MenuItemCard } from "@/components/menu/MenuItemCard";
 import { PaymentQR } from "@/components/menu/PaymentQR";
 import { ContactFooter } from "@/components/menu/ContactFooter";
@@ -13,9 +16,11 @@ interface MenuSectionsProps {
 }
 
 export function MenuSections({ onSelect }: MenuSectionsProps) {
+  const { categories, itemsByCategory } = useMenuData();
+
   return (
     <div>
-      {CATEGORIES.map((category) => (
+      {categories.map((category) => (
         <section
           key={category.id}
           id={sectionIdFor(category.id)}

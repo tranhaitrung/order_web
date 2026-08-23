@@ -3,13 +3,14 @@
 import { FormEvent, useMemo, useState } from "react";
 import Image from "next/image";
 import { CartLine, cartTotal, lineTotal } from "@/hooks/useCartStore";
+import { useMenuData } from "@/hooks/useMenuData";
 import {
   buildDeliveryDateOptions,
   firstAvailableSlotForDate,
   isDeliverySlotAvailable,
   pickDefaultDelivery,
 } from "@/lib/delivery";
-import { DELIVERY_SLOTS, DeliverySlotId, getMenuItem, getTopping, sugarIceLabel } from "@/lib/menu-data";
+import { DELIVERY_SLOTS, DeliverySlotId, sugarIceLabel } from "@/lib/menu-data";
 import { formatVnd } from "@/lib/format";
 import { Button } from "@/components/ui/Button";
 import { cn } from "@/lib/cn";
@@ -32,12 +33,13 @@ interface CheckoutViewProps {
 }
 
 export function CheckoutView({ lines, onBack, onSubmit, submitting }: CheckoutViewProps) {
+  const { itemsById, toppingsById } = useMenuData();
   const [name, setName] = useState("");
   const [phone, setPhone] = useState("");
   const [address, setAddress] = useState("");
   const [delivery, setDelivery] = useState(() => pickDefaultDelivery());
   const [errors, setErrors] = useState<{ name?: string; phone?: string; address?: string }>({});
-  const total = cartTotal(lines);
+  const total = cartTotal(lines, itemsById, toppingsById);
 
   const dateOptions = useMemo(() => buildDeliveryDateOptions(), []);
 
@@ -85,10 +87,10 @@ export function CheckoutView({ lines, onBack, onSubmit, submitting }: CheckoutVi
 
       <div className="mt-4 rounded-[var(--radius-md)] border border-line bg-surface p-4">
         {lines.map((line) => {
-          const item = getMenuItem(line.itemId);
+          const item = itemsById.get(line.itemId);
           if (!item) return null;
           const toppingNames = line.toppingIds
-            .map((id) => getTopping(id)?.name)
+            .map((id) => toppingsById.get(id)?.name)
             .filter((n): n is string => Boolean(n));
           return (
             <div key={line.id} className="py-1.5 text-sm">
@@ -97,7 +99,9 @@ export function CheckoutView({ lines, onBack, onSubmit, submitting }: CheckoutVi
                   {item.name} x{line.quantity}
                   {toppingNames.length ? ` (+${toppingNames.join(", ")})` : ""}
                 </span>
-                <span className="font-medium text-ink">{formatVnd(lineTotal(line))}</span>
+                <span className="font-medium text-ink">
+                  {formatVnd(lineTotal(line, itemsById, toppingsById))}
+                </span>
               </div>
               <p className="text-xs text-ink-soft">
                 Đường: {sugarIceLabel(line.sugarLevel)} · Đá: {sugarIceLabel(line.iceLevel)}
