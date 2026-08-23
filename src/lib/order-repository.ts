@@ -1,5 +1,7 @@
 import { pool } from "@/lib/db";
 
+export type OrderStatus = "pending" | "completed" | "cancelled";
+
 export interface OrderItemTopping {
   id: string;
   name: string;
@@ -138,9 +140,13 @@ export interface OrderRecord {
   deliveryDate: string;
   deliverySlot: string;
   total: number;
-  status: string;
+  status: OrderStatus;
   createdAt: string;
   items: OrderItemRecord[];
+}
+
+export async function updateOrderStatus(id: string, status: OrderStatus): Promise<void> {
+  await pool.query("UPDATE orders SET status = $1 WHERE id = $2", [status, id]);
 }
 
 export async function findOrdersByPhone(phone: string): Promise<OrderRecord[]> {
@@ -150,7 +156,7 @@ export async function findOrdersByPhone(phone: string): Promise<OrderRecord[]> {
     delivery_date: string;
     delivery_slot: string;
     total: number;
-    status: string;
+    status: OrderStatus;
     created_at: string;
   }>(
     `SELECT id, delivery_address, to_char(delivery_date, 'YYYY-MM-DD') AS delivery_date,
@@ -187,7 +193,7 @@ export async function findOrdersByDeliveryDate(date: string): Promise<AdminOrder
     delivery_date: string;
     delivery_slot: string;
     total: number;
-    status: string;
+    status: OrderStatus;
     created_at: string;
   }>(
     `SELECT id, customer_name, customer_phone, delivery_address,
@@ -234,7 +240,7 @@ export async function getPrepSummaryForDate(date: string): Promise<PrepSummaryLi
     `SELECT oi.item_id, oi.item_name, oi.sugar_level, oi.ice_level, oi.toppings, oi.quantity
      FROM order_items oi
      JOIN orders o ON o.id = oi.order_id
-     WHERE o.delivery_date = $1`,
+     WHERE o.delivery_date = $1 AND o.status != 'cancelled'`,
     [date],
   );
 
@@ -288,6 +294,7 @@ export async function getRevenueStats(period: RevenuePeriod): Promise<RevenueBuc
        COUNT(*) AS order_count,
        SUM(total) AS total_revenue
      FROM orders
+     WHERE status != 'cancelled'
      GROUP BY period_start
      ORDER BY period_start DESC
      LIMIT $2`,

@@ -57,6 +57,10 @@ export const menuItemUpdateSchema = z.object({
   soldOut: z.boolean(),
 });
 
+export const orderStatusUpdateSchema = z.object({
+  status: z.enum(["pending", "completed", "cancelled"]),
+});
+
 const DATE_KEY_REGEX = /^\d{4}-\d{2}-\d{2}$/;
 
 export const createExpenseSchema = z.object({

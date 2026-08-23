@@ -1,9 +1,10 @@
 import Link from "next/link";
 import { dateKeyToDate, formatDeliveryDateForMessage, nowInVietnam, toDateKey } from "@/lib/delivery";
 import { formatVnd } from "@/lib/format";
-import { deliverySlotLabel, DeliverySlotId, sugarIceLabel, SugarIceLevel } from "@/lib/menu-data";
+import { sugarIceLabel, SugarIceLevel } from "@/lib/menu-data";
 import { findOrdersByDeliveryDate, getPrepSummaryForDate } from "@/lib/order-repository";
 import { Button } from "@/components/ui/Button";
+import { OrderCard } from "@/app/admin/orders/OrderCard";
 
 function resolveDate(raw: string | undefined): string {
   if (raw && /^\d{4}-\d{2}-\d{2}$/.test(raw) && dateKeyToDate(raw)) return raw;
@@ -15,10 +16,6 @@ function shiftDate(dateKey: string, days: number): string {
   if (!date) return dateKey;
   date.setDate(date.getDate() + days);
   return toDateKey(date);
-}
-
-function formatCreatedAt(iso: string): string {
-  return new Date(iso).toLocaleString("vi-VN", { hour: "2-digit", minute: "2-digit" });
 }
 
 export default async function AdminOrdersPage({
@@ -34,7 +31,9 @@ export default async function AdminOrdersPage({
     getPrepSummaryForDate(date),
   ]);
 
-  const totalRevenue = orders.reduce((sum, order) => sum + order.total, 0);
+  const billableOrders = orders.filter((order) => order.status !== "cancelled");
+  const totalRevenue = billableOrders.reduce((sum, order) => sum + order.total, 0);
+  const cancelledCount = orders.length - billableOrders.length;
 
   return (
     <div className="mx-auto flex max-w-3xl flex-col gap-6">
@@ -68,6 +67,7 @@ export default async function AdminOrdersPage({
 
       <p className="text-sm text-ink-soft">
         {formatDeliveryDateForMessage(date)} · {orders.length} đơn · {formatVnd(totalRevenue)}
+        {cancelledCount > 0 ? ` (đã trừ ${cancelledCount} đơn huỷ)` : ""}
       </p>
 
       <section>
@@ -112,34 +112,7 @@ export default async function AdminOrdersPage({
         ) : (
           <div className="mt-3 flex flex-col gap-3">
             {orders.map((order) => (
-              <div key={order.id} className="rounded-[var(--radius-md)] border border-line bg-surface p-4">
-                <div className="flex items-start justify-between gap-3">
-                  <div>
-                    <p className="font-semibold text-ink">
-                      {order.customerName} · {order.customerPhone}
-                    </p>
-                    <p className="text-xs text-ink-soft">
-                      Đặt lúc {formatCreatedAt(order.createdAt)} · Giao{" "}
-                      {deliverySlotLabel(order.deliverySlot as DeliverySlotId)}
-                    </p>
-                  </div>
-                  <span className="font-display text-base font-bold text-primary">{formatVnd(order.total)}</span>
-                </div>
-
-                <div className="mt-2 flex flex-col gap-1">
-                  {order.items.map((item, index) => (
-                    <p key={index} className="text-sm text-ink-soft">
-                      {item.itemName} x{item.quantity}
-                      {item.toppings.length ? ` (+${item.toppings.map((t) => t.name).join(", ")})` : ""} —{" "}
-                      {sugarIceLabel(item.sugarLevel as SugarIceLevel)} /{" "}
-                      {sugarIceLabel(item.iceLevel as SugarIceLevel)}
-                      {item.note ? ` · 📝 ${item.note}` : ""}
-                    </p>
-                  ))}
-                </div>
-
-                <p className="mt-2 text-xs text-ink-soft">📍 {order.deliveryAddress}</p>
-              </div>
+              <OrderCard key={order.id} order={order} />
             ))}
           </div>
         )}
