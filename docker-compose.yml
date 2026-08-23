@@ -11,23 +11,14 @@ services:
     env_file:
       - .env
 
-    environment:
-      GOOGLE_APPLICATION_CREDENTIALS: /app/secrets/gcs-service-account.json
-      DATABASE_URL: postgresql://postgres:postgres@db:5432/it_house_ordering
-
-    volumes:
-      - ./secrets/gcs-service-account.json:/app/secrets/gcs-service-account.json:ro
-
     ports:
       - "3000:3000"
-
-    depends_on:
-      db:
-        condition: service_healthy
 
     networks:
       - order-network
 
+  # Optional local Postgres for development — `app` reads DATABASE_URL from .env.local instead,
+  # so update that file (not this service) if you switch databases. Start with `docker compose up -d db`.
   db:
     image: postgres:16-alpine
     container_name: order-db

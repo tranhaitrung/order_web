@@ -12,9 +12,32 @@ function createPool(): Pool {
   return new Pool({ connectionString });
 }
 
-// Reuse the pool across hot reloads in dev so we don't leak connections.
-export const pool = global.pgPool ?? createPool();
+let cachedPool: Pool | undefined;
 
-if (process.env.NODE_ENV !== "production") {
-  global.pgPool = pool;
+/**
+ * Created lazily on first real use, not on import — `next build` imports every route module
+ * (even ones that never run) to collect its config, and that must succeed without DATABASE_URL
+ * being set (e.g. inside the Docker build stage, where .env.local isn't available).
+ */
+function resolvePool(): Pool {
+  // Reuse the pool across hot reloads in dev so we don't leak connections.
+  if (process.env.NODE_ENV !== "production") {
+    if (!global.pgPool) {
+      global.pgPool = createPool();
+    }
+    return global.pgPool;
+  }
+
+  if (!cachedPool) {
+    cachedPool = createPool();
+  }
+  return cachedPool;
 }
+
+export const pool: Pool = new Proxy({} as Pool, {
+  get(_target, prop) {
+    const real = resolvePool();
+    const value = Reflect.get(real, prop, real);
+    return typeof value === "function" ? value.bind(real) : value;
+  },
+});

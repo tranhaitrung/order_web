@@ -27,6 +27,13 @@ npm run db:migrate               # create tables
 npm run db:seed                  # load the menu
 ```
 
+## Deploy with Docker
+
+`docker compose up -d app` builds and runs the app container, reading config straight from `.env.local`
+(TELEGRAM_*, DATABASE_URL, ADMIN_USERNAME, ADMIN_PASSWORD) — no separate `.env` file needed. Point
+`DATABASE_URL` at whichever Postgres you're using (the bundled `db` service or an external one); the `db`
+service here is only for local development and isn't required by `app`.
+
 ## Admin
 
 `/admin` (order-by-day view + revenue stats) is protected by HTTP Basic Auth. Set `ADMIN_USERNAME` and
