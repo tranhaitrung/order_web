@@ -1,5 +1,6 @@
 import { pool } from "@/lib/db";
 import type { Category, MenuItem, Topping } from "@/lib/menu-data";
+import { slugify } from "@/lib/slug";
 
 export interface MenuData {
   categories: Category[];
@@ -74,4 +75,67 @@ export async function findToppingsByIds(ids: string[]): Promise<Map<string, Topp
 
 export async function setMenuItemSoldOut(id: string, soldOut: boolean): Promise<void> {
   await pool.query("UPDATE menu_items SET is_sold_out = $1 WHERE id = $2", [soldOut, id]);
+}
+
+/** Slugifies `name` and appends `-2`, `-3`, … until the id is free in `table`. */
+async function generateUniqueId(table: "menu_items" | "toppings", name: string): Promise<string> {
+  const base = slugify(name) || "item";
+  let candidate = base;
+  let suffix = 2;
+
+  while (true) {
+    const result = await pool.query(`SELECT 1 FROM ${table} WHERE id = $1`, [candidate]);
+    if (result.rowCount === 0) return candidate;
+    candidate = `${base}-${suffix}`;
+    suffix += 1;
+  }
+}
+
+export interface CreateMenuItemInput {
+  name: string;
+  price: number;
+  category: string;
+  imageSrc: string;
+  mustTry?: boolean;
+}
+
+export async function createMenuItem(input: CreateMenuItemInput): Promise<MenuItem> {
+  const id = await generateUniqueId("menu_items", input.name);
+
+  const sortOrderResult = await pool.query<{ next: number }>(
+    "SELECT COALESCE(MAX(sort_order), -1) + 1 AS next FROM menu_items",
+  );
+  const sortOrder = sortOrderResult.rows[0].next;
+
+  const result = await pool.query<MenuItemRow>(
+    `INSERT INTO menu_items (id, name, price, category_id, must_try, image_src, sort_order)
+     VALUES ($1, $2, $3, $4, $5, $6, $7)
+     RETURNING ${MENU_ITEM_COLUMNS}`,
+    [id, input.name.trim(), input.price, input.category, input.mustTry ?? false, input.imageSrc.trim(), sortOrder],
+  );
+
+  return mapMenuItemRow(result.rows[0]);
+}
+
+export interface CreateToppingInput {
+  name: string;
+  price: number;
+}
+
+export async function createTopping(input: CreateToppingInput): Promise<Topping> {
+  const id = await generateUniqueId("toppings", input.name);
+
+  const sortOrderResult = await pool.query<{ next: number }>(
+    "SELECT COALESCE(MAX(sort_order), -1) + 1 AS next FROM toppings",
+  );
+  const sortOrder = sortOrderResult.rows[0].next;
+
+  const result = await pool.query<Topping>(
+    `INSERT INTO toppings (id, name, price, sort_order)
+     VALUES ($1, $2, $3, $4)
+     RETURNING id, name, price`,
+    [id, input.name.trim(), input.price, sortOrder],
+  );
+
+  return result.rows[0];
 }

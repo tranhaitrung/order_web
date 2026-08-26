@@ -57,6 +57,19 @@ export const menuItemUpdateSchema = z.object({
   soldOut: z.boolean(),
 });
 
+export const menuItemCreateSchema = z.object({
+  name: z.string().trim().min(1, "Vui lòng nhập tên món").max(120),
+  price: z.number().int().min(1000, "Giá phải lớn hơn 0"),
+  category: z.string().trim().min(1, "Vui lòng chọn danh mục"),
+  imageSrc: z.string().trim().url("Link ảnh không hợp lệ"),
+  mustTry: z.boolean().optional(),
+});
+
+export const toppingCreateSchema = z.object({
+  name: z.string().trim().min(1, "Vui lòng nhập tên topping").max(120),
+  price: z.number().int().min(0, "Giá không hợp lệ"),
+});
+
 export const orderStatusUpdateSchema = z.object({
   status: z.enum(["pending", "completed", "cancelled"]),
 });

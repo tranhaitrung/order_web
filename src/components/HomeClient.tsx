@@ -15,6 +15,7 @@ import { CartDrawer } from "@/components/cart/CartDrawer";
 import { CheckoutView, type CheckoutPayload } from "@/components/checkout/CheckoutView";
 import { ConfirmationView } from "@/components/checkout/ConfirmationView";
 import { ErrorView } from "@/components/checkout/ErrorView";
+import { ZaloButton } from "@/components/ZaloButton";
 
 type View = "browsing" | "checkout" | "success" | "error";
 
@@ -52,6 +53,7 @@ function Home({ isClosed, closedNote }: { isClosed: boolean; closedNote: string 
   const updateQuantity = useCartStore((state) => state.updateQuantity);
   const removeLine = useCartStore((state) => state.removeLine);
   const clearCart = useCartStore((state) => state.clear);
+  const hasCartItems = cartCount(lines) > 0;
 
   function scrollToCategory(category: CategoryId) {
     document.getElementById(sectionIdFor(category))?.scrollIntoView({ behavior: "smooth", block: "start" });
@@ -155,6 +157,8 @@ function Home({ isClosed, closedNote }: { isClosed: boolean; closedNote: string 
         total={cartTotal(lines, itemsById, toppingsById)}
         onOpen={() => setIsCartOpen(true)}
       />
+
+      <ZaloButton liftedByCartBar={hasCartItems} />
 
       {isCartOpen ? (
         <CartDrawer
