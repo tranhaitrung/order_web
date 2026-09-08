@@ -101,3 +101,11 @@ export const expenseRangeQuerySchema = z.object({
   from: z.string().regex(DATE_KEY_REGEX, "Ngày không hợp lệ"),
   to: z.string().regex(DATE_KEY_REGEX, "Ngày không hợp lệ"),
 });
+
+export const createManualRevenueSchema = z.object({
+  amount: z.number().int().min(1, "Số tiền phải lớn hơn 0"),
+  note: z.string().trim().max(200).optional(),
+  entryDate: z.string().regex(DATE_KEY_REGEX, "Ngày không hợp lệ"),
+});
+
+export const manualRevenueRangeQuerySchema = expenseRangeQuerySchema;

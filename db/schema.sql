@@ -88,3 +88,15 @@ CREATE TABLE IF NOT EXISTS expenses (
 );
 
 CREATE INDEX IF NOT EXISTS expenses_purchased_at_idx ON expenses (purchased_at);
+
+-- Manual revenue entries admins can add by hand (e.g. cash sales not placed through the ordering flow).
+-- Included alongside `orders` when computing revenue stats.
+CREATE TABLE IF NOT EXISTS manual_revenue_entries (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  amount INTEGER NOT NULL,
+  note TEXT,
+  entry_date DATE NOT NULL,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+
+CREATE INDEX IF NOT EXISTS manual_revenue_entries_entry_date_idx ON manual_revenue_entries (entry_date);

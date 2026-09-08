@@ -286,15 +286,31 @@ const REVENUE_BUCKET_LIMIT: Record<RevenuePeriod, number> = {
   year: 5,
 };
 
-/** Buckets on Vietnam local calendar days/weeks/months/years, not UTC. */
+/** Buckets on Vietnam local calendar days/weeks/months/years, not UTC. Includes manually-entered revenue alongside orders. */
 export async function getRevenueStats(period: RevenuePeriod): Promise<RevenueBucket[]> {
   const result = await pool.query<{ period_start: string; order_count: string; total_revenue: string }>(
-    `SELECT
-       to_char(date_trunc($1, created_at AT TIME ZONE 'Asia/Ho_Chi_Minh'), 'YYYY-MM-DD') AS period_start,
-       COUNT(*) AS order_count,
-       SUM(total) AS total_revenue
-     FROM orders
-     WHERE status != 'cancelled'
+    `WITH order_buckets AS (
+       SELECT
+         date_trunc($1, created_at AT TIME ZONE 'Asia/Ho_Chi_Minh') AS period_start,
+         COUNT(*) AS order_count,
+         SUM(total) AS revenue
+       FROM orders
+       WHERE status != 'cancelled'
+       GROUP BY period_start
+     ),
+     manual_buckets AS (
+       SELECT
+         date_trunc($1, entry_date::timestamp) AS period_start,
+         0 AS order_count,
+         SUM(amount) AS revenue
+       FROM manual_revenue_entries
+       GROUP BY period_start
+     )
+     SELECT
+       to_char(period_start, 'YYYY-MM-DD') AS period_start,
+       SUM(order_count) AS order_count,
+       SUM(revenue) AS total_revenue
+     FROM (SELECT * FROM order_buckets UNION ALL SELECT * FROM manual_buckets) combined
      GROUP BY period_start
      ORDER BY period_start DESC
      LIMIT $2`,

@@ -4,6 +4,7 @@ import { formatVnd } from "@/lib/format";
 import { getRevenueStats, type RevenuePeriod } from "@/lib/order-repository";
 import { PERIOD_OPTIONS, periodLabel } from "@/app/admin/revenue/period";
 import { RevenueChart } from "@/app/admin/revenue/RevenueChart";
+import { ManualRevenueManager } from "@/app/admin/revenue/ManualRevenueManager";
 
 function resolvePeriod(raw: string | undefined): RevenuePeriod {
   return PERIOD_OPTIONS.some((option) => option.id === raw) ? (raw as RevenuePeriod) : "day";
@@ -76,6 +77,8 @@ export default async function AdminRevenuePage({
           </tbody>
         </table>
       </div>
+
+      <ManualRevenueManager />
     </div>
   );
 }
