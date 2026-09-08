@@ -59,12 +59,19 @@ const menuItemSizeInputSchema = z.object({
   price: z.number().int().min(1000, "Giá phải lớn hơn 0"),
 });
 
+// Accepts a full external URL (https://...) or a local path under /public (e.g. /menu/tra-sua.jpeg) —
+// existing seeded items use local paths, only newly-added items via the admin form use external links.
+const imageSrcSchema = z
+  .string()
+  .trim()
+  .refine((value) => /^https?:\/\//.test(value) || value.startsWith("/"), "Link ảnh không hợp lệ");
+
 export const menuItemUpdateSchema = z
   .object({
     name: z.string().trim().min(1, "Vui lòng nhập tên món").max(120).optional(),
     price: z.number().int().min(1000, "Giá phải lớn hơn 0").optional(),
     category: z.string().trim().min(1, "Vui lòng chọn danh mục").optional(),
-    imageSrc: z.string().trim().url("Link ảnh không hợp lệ").optional(),
+    imageSrc: imageSrcSchema.optional(),
     mustTry: z.boolean().optional(),
     soldOut: z.boolean().optional(),
     sizes: z.array(menuItemSizeInputSchema).max(6, "Tối đa 6 size").optional(),
@@ -75,7 +82,7 @@ export const menuItemCreateSchema = z.object({
   name: z.string().trim().min(1, "Vui lòng nhập tên món").max(120),
   price: z.number().int().min(1000, "Giá phải lớn hơn 0"),
   category: z.string().trim().min(1, "Vui lòng chọn danh mục"),
-  imageSrc: z.string().trim().url("Link ảnh không hợp lệ"),
+  imageSrc: imageSrcSchema,
   mustTry: z.boolean().optional(),
   sizes: z.array(menuItemSizeInputSchema).max(6, "Tối đa 6 size").optional(),
 });
