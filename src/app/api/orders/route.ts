@@ -61,6 +61,20 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    let unitPrice = menuItem.price;
+    let sizeLabel: string | undefined;
+    if (menuItem.sizes.length > 0) {
+      const size = menuItem.sizes.find((s) => s.id === line.sizeId);
+      if (!size) {
+        return NextResponse.json(
+          { errors: { items: `Vui lòng chọn size hợp lệ cho món: ${menuItem.name}` } },
+          { status: 422 },
+        );
+      }
+      unitPrice = size.price;
+      sizeLabel = size.label;
+    }
+
     const toppings: { id: string; name: string; price: number }[] = [];
     let toppingsPrice = 0;
     for (const toppingId of line.toppingIds) {
@@ -75,11 +89,12 @@ export async function POST(request: NextRequest) {
       toppingsPrice += topping.price;
     }
 
-    const lineTotalAmount = (menuItem.price + toppingsPrice) * line.quantity;
+    const lineTotalAmount = (unitPrice + toppingsPrice) * line.quantity;
     total += lineTotalAmount;
 
     summaryLines.push({
       name: menuItem.name,
+      sizeLabel,
       quantity: line.quantity,
       toppingNames: toppings.map((t) => t.name),
       sugarLabel: sugarIceLabel(line.sugarLevel),
@@ -91,6 +106,8 @@ export async function POST(request: NextRequest) {
     orderItems.push({
       itemId: menuItem.id,
       itemName: menuItem.name,
+      sizeId: line.sizeId,
+      sizeLabel,
       quantity: line.quantity,
       sugarLevel: line.sugarLevel,
       iceLevel: line.iceLevel,

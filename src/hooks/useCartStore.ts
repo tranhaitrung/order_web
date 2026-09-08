@@ -4,6 +4,7 @@ import { DEFAULT_SUGAR_ICE_LEVEL, MenuItem, SugarIceLevel, Topping } from "@/lib
 export interface CartLine {
   id: string;
   itemId: string;
+  sizeId?: string;
   quantity: number;
   toppingIds: string[];
   sugarLevel: SugarIceLevel;
@@ -41,6 +42,12 @@ export const DEFAULT_CART_MODIFIERS = {
   iceLevel: DEFAULT_SUGAR_ICE_LEVEL,
 };
 
+/** Resolves the base unit price for a line: the chosen size's price if the item has sizes, else the item's own price. */
+export function lineBasePrice(line: CartLine, item: MenuItem): number {
+  if (item.sizes.length === 0) return item.price;
+  return item.sizes.find((size) => size.id === line.sizeId)?.price ?? item.sizes[0].price;
+}
+
 export function lineUnitPrice(
   line: CartLine,
   itemsById: Map<string, MenuItem>,
@@ -49,7 +56,7 @@ export function lineUnitPrice(
   const item = itemsById.get(line.itemId);
   if (!item) return 0;
   const toppingsPrice = line.toppingIds.reduce((sum, id) => sum + (toppingsById.get(id)?.price ?? 0), 0);
-  return item.price + toppingsPrice;
+  return lineBasePrice(line, item) + toppingsPrice;
 }
 
 export function lineTotal(

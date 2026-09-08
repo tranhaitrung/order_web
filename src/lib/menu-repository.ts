@@ -1,5 +1,5 @@
 import { pool } from "@/lib/db";
-import type { Category, MenuItem, Topping } from "@/lib/menu-data";
+import type { Category, MenuItem, MenuItemSize, Topping } from "@/lib/menu-data";
 import { slugify } from "@/lib/slug";
 
 export interface MenuData {
@@ -16,9 +16,19 @@ interface MenuItemRow {
   must_try: boolean;
   image_src: string;
   is_sold_out: boolean;
+  sizes: MenuItemSize[] | null;
 }
 
-const MENU_ITEM_COLUMNS = "id, name, price, category_id AS category, must_try, image_src, is_sold_out";
+// Correlated subquery aggregating each item's optional sizes as JSON. Queries using this must
+// alias the menu_items table as `mi` so `mi.id` here unambiguously means the outer item's id
+// (unqualified `id` risked resolving to menu_item_sizes.id — a UUID — causing a text = uuid error).
+const MENU_ITEM_SIZES_JSON = `COALESCE((
+  SELECT json_agg(json_build_object('id', s.id, 'label', s.label, 'price', s.price) ORDER BY s.sort_order)
+  FROM menu_item_sizes s
+  WHERE s.menu_item_id = mi.id
+), '[]'::json)`;
+
+const MENU_ITEM_COLUMNS = `mi.id, mi.name, mi.price, mi.category_id AS category, mi.must_try, mi.image_src, mi.is_sold_out, ${MENU_ITEM_SIZES_JSON} AS sizes`;
 
 function mapMenuItemRow(row: MenuItemRow): MenuItem {
   return {
@@ -29,6 +39,7 @@ function mapMenuItemRow(row: MenuItemRow): MenuItem {
     mustTry: row.must_try,
     imageSrc: row.image_src,
     soldOut: row.is_sold_out,
+    sizes: row.sizes ?? [],
   };
 }
 
@@ -39,7 +50,7 @@ export async function listMenuData(): Promise<MenuData> {
       "SELECT id, name, price FROM toppings WHERE is_active ORDER BY sort_order",
     ),
     pool.query<MenuItemRow>(
-      `SELECT ${MENU_ITEM_COLUMNS} FROM menu_items WHERE is_active ORDER BY sort_order`,
+      `SELECT ${MENU_ITEM_COLUMNS} FROM menu_items mi WHERE mi.is_active ORDER BY mi.sort_order`,
     ),
   ]);
 
@@ -50,12 +61,20 @@ export async function listMenuData(): Promise<MenuData> {
   };
 }
 
+export async function getMenuItemById(id: string): Promise<MenuItem | null> {
+  const result = await pool.query<MenuItemRow>(
+    `SELECT ${MENU_ITEM_COLUMNS} FROM menu_items mi WHERE mi.id = $1`,
+    [id],
+  );
+  return result.rows[0] ? mapMenuItemRow(result.rows[0]) : null;
+}
+
 /** Excludes sold-out items — used to validate cart contents before an order is accepted. */
 export async function findMenuItemsByIds(ids: string[]): Promise<Map<string, MenuItem>> {
   if (ids.length === 0) return new Map();
 
   const result = await pool.query<MenuItemRow>(
-    `SELECT ${MENU_ITEM_COLUMNS} FROM menu_items WHERE id = ANY($1) AND is_active AND NOT is_sold_out`,
+    `SELECT ${MENU_ITEM_COLUMNS} FROM menu_items mi WHERE mi.id = ANY($1) AND mi.is_active AND NOT mi.is_sold_out`,
     [ids],
   );
 
@@ -73,6 +92,34 @@ export async function findToppingsByIds(ids: string[]): Promise<Map<string, Topp
   return new Map(result.rows.map((row) => [row.id, row]));
 }
 
+export interface MenuItemSizeInput {
+  label: string;
+  price: number;
+}
+
+/** Deletes and re-inserts all sizes for a menu item, in the given order. */
+async function replaceMenuItemSizes(menuItemId: string, sizes: MenuItemSizeInput[]): Promise<void> {
+  const client = await pool.connect();
+  try {
+    await client.query("BEGIN");
+    await client.query("DELETE FROM menu_item_sizes WHERE menu_item_id = $1", [menuItemId]);
+
+    for (let i = 0; i < sizes.length; i += 1) {
+      await client.query(
+        `INSERT INTO menu_item_sizes (menu_item_id, label, price, sort_order) VALUES ($1, $2, $3, $4)`,
+        [menuItemId, sizes[i].label.trim(), sizes[i].price, i],
+      );
+    }
+
+    await client.query("COMMIT");
+  } catch (error) {
+    await client.query("ROLLBACK");
+    throw error;
+  } finally {
+    client.release();
+  }
+}
+
 export interface UpdateMenuItemInput {
   name?: string;
   price?: number;
@@ -80,6 +127,8 @@ export interface UpdateMenuItemInput {
   imageSrc?: string;
   mustTry?: boolean;
   soldOut?: boolean;
+  /** When provided (including an empty array), fully replaces the item's sizes. */
+  sizes?: MenuItemSizeInput[];
 }
 
 export async function updateMenuItem(id: string, input: UpdateMenuItemInput): Promise<MenuItem | null> {
@@ -112,15 +161,20 @@ export async function updateMenuItem(id: string, input: UpdateMenuItemInput): Pr
     values.push(input.soldOut);
   }
 
-  if (fields.length === 0) return null;
+  if (fields.length > 0) {
+    values.push(id);
+    const result = await pool.query(`UPDATE menu_items SET ${fields.join(", ")} WHERE id = $${index}`, values);
+    if (result.rowCount === 0) return null;
+  } else {
+    const exists = await pool.query("SELECT 1 FROM menu_items WHERE id = $1", [id]);
+    if (exists.rowCount === 0) return null;
+  }
 
-  values.push(id);
-  const result = await pool.query<MenuItemRow>(
-    `UPDATE menu_items SET ${fields.join(", ")} WHERE id = $${index} RETURNING ${MENU_ITEM_COLUMNS}`,
-    values,
-  );
+  if (input.sizes !== undefined) {
+    await replaceMenuItemSizes(id, input.sizes);
+  }
 
-  return result.rows[0] ? mapMenuItemRow(result.rows[0]) : null;
+  return getMenuItemById(id);
 }
 
 /** Slugifies `name` and appends `-2`, `-3`, … until the id is free in `table`. */
@@ -143,6 +197,7 @@ export interface CreateMenuItemInput {
   category: string;
   imageSrc: string;
   mustTry?: boolean;
+  sizes?: MenuItemSizeInput[];
 }
 
 export async function createMenuItem(input: CreateMenuItemInput): Promise<MenuItem> {
@@ -153,14 +208,19 @@ export async function createMenuItem(input: CreateMenuItemInput): Promise<MenuIt
   );
   const sortOrder = sortOrderResult.rows[0].next;
 
-  const result = await pool.query<MenuItemRow>(
+  await pool.query(
     `INSERT INTO menu_items (id, name, price, category_id, must_try, image_src, sort_order)
-     VALUES ($1, $2, $3, $4, $5, $6, $7)
-     RETURNING ${MENU_ITEM_COLUMNS}`,
+     VALUES ($1, $2, $3, $4, $5, $6, $7)`,
     [id, input.name.trim(), input.price, input.category, input.mustTry ?? false, input.imageSrc.trim(), sortOrder],
   );
 
-  return mapMenuItemRow(result.rows[0]);
+  if (input.sizes && input.sizes.length > 0) {
+    await replaceMenuItemSizes(id, input.sizes);
+  }
+
+  const item = await getMenuItemById(id);
+  if (!item) throw new Error("Không tạo được món");
+  return item;
 }
 
 export interface CreateToppingInput {

@@ -80,6 +80,7 @@ export default async function AdminOrdersPage({
               <thead className="bg-surface-alt text-left text-xs font-semibold uppercase tracking-wide text-ink-soft">
                 <tr>
                   <th className="px-3 py-2">Món</th>
+                  <th className="px-3 py-2">Size</th>
                   <th className="px-3 py-2">Đường / Đá</th>
                   <th className="px-3 py-2">Topping</th>
                   <th className="px-3 py-2 text-right">Số lượng</th>
@@ -89,6 +90,7 @@ export default async function AdminOrdersPage({
                 {summary.map((line, index) => (
                   <tr key={index} className="border-t border-line">
                     <td className="px-3 py-2 font-medium text-ink">{line.itemName}</td>
+                    <td className="px-3 py-2 text-ink-soft">{line.sizeLabel || "—"}</td>
                     <td className="px-3 py-2 text-ink-soft">
                       {sugarIceLabel(line.sugarLevel as SugarIceLevel)} /{" "}
                       {sugarIceLabel(line.iceLevel as SugarIceLevel)}

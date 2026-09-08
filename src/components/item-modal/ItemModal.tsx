@@ -15,11 +15,51 @@ interface ItemModalProps {
   onClose: () => void;
   onAddToCart: (payload: {
     quantity: number;
+    sizeId?: string;
     toppingIds: string[];
     sugarLevel: SugarIceLevel;
     iceLevel: SugarIceLevel;
     note?: string;
   }) => void;
+}
+
+function SizePicker({
+  sizes,
+  value,
+  onChange,
+}: {
+  sizes: MenuItem["sizes"];
+  value: string;
+  onChange: (sizeId: string) => void;
+}) {
+  return (
+    <div>
+      <p className="text-sm font-semibold text-ink">Size</p>
+      <div className="mt-2 grid grid-cols-3 gap-2">
+        {sizes.map((size) => {
+          const isActive = size.id === value;
+          return (
+            <button
+              key={size.id}
+              type="button"
+              onClick={() => onChange(size.id)}
+              className={cn(
+                "flex flex-col items-center rounded-[var(--radius-sm)] border px-2 py-2 text-sm font-medium transition-colors",
+                isActive
+                  ? "border-primary bg-primary text-white"
+                  : "border-line bg-surface text-ink-soft hover:border-primary/40",
+              )}
+            >
+              <span>{size.label}</span>
+              <span className={cn("text-xs", isActive ? "text-white/90" : "text-ink-soft")}>
+                {formatVnd(size.price)}
+              </span>
+            </button>
+          );
+        })}
+      </div>
+    </div>
+  );
 }
 
 function LevelPicker({
@@ -61,16 +101,18 @@ function LevelPicker({
 export function ItemModal({ item, onClose, onAddToCart }: ItemModalProps) {
   const { toppings } = useMenuData();
   const [quantity, setQuantity] = useState(1);
+  const [sizeId, setSizeId] = useState<string>(item.sizes[0]?.id ?? "");
   const [toppingIds, setToppingIds] = useState<string[]>([]);
   const [sugarLevel, setSugarLevel] = useState<SugarIceLevel>(DEFAULT_SUGAR_ICE_LEVEL);
   const [iceLevel, setIceLevel] = useState<SugarIceLevel>(DEFAULT_SUGAR_ICE_LEVEL);
   const [note, setNote] = useState("");
 
+  const basePrice = item.sizes.length > 0 ? (item.sizes.find((s) => s.id === sizeId)?.price ?? item.sizes[0].price) : item.price;
   const toppingsPrice = toppingIds.reduce(
     (sum, id) => sum + (toppings.find((t) => t.id === id)?.price ?? 0),
     0,
   );
-  const subtotal = (item.price + toppingsPrice) * quantity;
+  const subtotal = (basePrice + toppingsPrice) * quantity;
 
   function toggleTopping(id: string) {
     setToppingIds((current) => (current.includes(id) ? current.filter((t) => t !== id) : [...current, id]));
@@ -114,11 +156,13 @@ export function ItemModal({ item, onClose, onAddToCart }: ItemModalProps) {
             <h2 id="item-modal-title" className="font-display text-xl font-semibold text-ink">
               {item.name}
             </h2>
-            <p className="mt-1 text-sm font-semibold text-primary">{formatVnd(item.price)}</p>
+            <p className="mt-1 text-sm font-semibold text-primary">{formatVnd(basePrice)}</p>
           </div>
         </div>
 
         <div className="flex-1 space-y-5 overflow-y-auto px-6">
+          {item.sizes.length > 0 ? <SizePicker sizes={item.sizes} value={sizeId} onChange={setSizeId} /> : null}
+
           <div>
             <p className="text-sm font-semibold text-ink">Topping</p>
             <div className="mt-2 flex flex-col gap-2">
@@ -191,7 +235,14 @@ export function ItemModal({ item, onClose, onAddToCart }: ItemModalProps) {
           <Button
             className="w-full"
             onClick={() => {
-              onAddToCart({ quantity, toppingIds, sugarLevel, iceLevel, note: note.trim() || undefined });
+              onAddToCart({
+                quantity,
+                sizeId: item.sizes.length > 0 ? sizeId : undefined,
+                toppingIds,
+                sugarLevel,
+                iceLevel,
+                note: note.trim() || undefined,
+              });
               onClose();
             }}
           >

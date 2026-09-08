@@ -18,6 +18,7 @@ interface OrderItemTopping {
 
 interface OrderItem {
   itemName: string;
+  sizeLabel: string | null;
   quantity: number;
   sugarLevel: SugarIceLevel;
   iceLevel: SugarIceLevel;
@@ -143,7 +144,8 @@ export default function OrderLookupPage() {
                     <div key={index} className="text-sm">
                       <div className="flex items-center justify-between">
                         <span className="text-ink-soft">
-                          {item.itemName} x{item.quantity}
+                          {item.itemName}
+                          {item.sizeLabel ? ` (${item.sizeLabel})` : ""} x{item.quantity}
                           {item.toppings.length
                             ? ` (+${item.toppings.map((t) => t.name).join(", ")})`
                             : ""}

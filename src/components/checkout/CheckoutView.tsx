@@ -12,6 +12,7 @@ import {
 } from "@/lib/delivery";
 import { DELIVERY_SLOTS, DeliverySlotId, sugarIceLabel } from "@/lib/menu-data";
 import { formatVnd } from "@/lib/format";
+import { loadLastCustomer } from "@/lib/customer-storage";
 import { Button } from "@/components/ui/Button";
 import { cn } from "@/lib/cn";
 
@@ -34,9 +35,10 @@ interface CheckoutViewProps {
 
 export function CheckoutView({ lines, onBack, onSubmit, submitting }: CheckoutViewProps) {
   const { itemsById, toppingsById } = useMenuData();
-  const [name, setName] = useState("");
-  const [phone, setPhone] = useState("");
-  const [address, setAddress] = useState("");
+  // Lazy-initialized from the last successful order on this device/browser — a convenience, not an account system.
+  const [name, setName] = useState(() => loadLastCustomer()?.customerName ?? "");
+  const [phone, setPhone] = useState(() => loadLastCustomer()?.customerPhone ?? "");
+  const [address, setAddress] = useState(() => loadLastCustomer()?.deliveryAddress ?? "");
   const [delivery, setDelivery] = useState(() => pickDefaultDelivery());
   const [errors, setErrors] = useState<{ name?: string; phone?: string; address?: string }>({});
   const total = cartTotal(lines, itemsById, toppingsById);
@@ -89,6 +91,7 @@ export function CheckoutView({ lines, onBack, onSubmit, submitting }: CheckoutVi
         {lines.map((line) => {
           const item = itemsById.get(line.itemId);
           if (!item) return null;
+          const sizeLabel = item.sizes.find((size) => size.id === line.sizeId)?.label;
           const toppingNames = line.toppingIds
             .map((id) => toppingsById.get(id)?.name)
             .filter((n): n is string => Boolean(n));
@@ -96,7 +99,8 @@ export function CheckoutView({ lines, onBack, onSubmit, submitting }: CheckoutVi
             <div key={line.id} className="py-1.5 text-sm">
               <div className="flex items-center justify-between">
                 <span className="text-ink-soft">
-                  {item.name} x{line.quantity}
+                  {item.name}
+                  {sizeLabel ? ` (${sizeLabel})` : ""} x{line.quantity}
                   {toppingNames.length ? ` (+${toppingNames.join(", ")})` : ""}
                 </span>
                 <span className="font-medium text-ink">

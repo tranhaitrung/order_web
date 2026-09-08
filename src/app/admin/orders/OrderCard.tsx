@@ -84,7 +84,8 @@ export function OrderCard({ order }: { order: AdminOrderRecord }) {
       <div className="mt-2 flex flex-col gap-1">
         {order.items.map((item, index) => (
           <p key={index} className="text-sm text-ink-soft">
-            {item.itemName} x{item.quantity}
+            {item.itemName}
+            {item.sizeLabel ? ` (${item.sizeLabel})` : ""} x{item.quantity}
             {item.toppings.length ? ` (+${item.toppings.map((t) => t.name).join(", ")})` : ""} —{" "}
             {sugarIceLabel(item.sugarLevel as SugarIceLevel)} /{" "}
             {sugarIceLabel(item.iceLevel as SugarIceLevel)}

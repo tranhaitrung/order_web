@@ -5,6 +5,7 @@ import { FormEvent, useState } from "react";
 import { useRouter } from "next/navigation";
 import { Category } from "@/lib/menu-data";
 import { Button } from "@/components/ui/Button";
+import { SizesEditor, SizeRow } from "@/app/admin/menu/SizesEditor";
 
 export function CreateMenuItemForm({ categories }: { categories: Category[] }) {
   const router = useRouter();
@@ -14,6 +15,7 @@ export function CreateMenuItemForm({ categories }: { categories: Category[] }) {
   const [imageSrc, setImageSrc] = useState("");
   const [imageOk, setImageOk] = useState(false);
   const [mustTry, setMustTry] = useState(false);
+  const [sizes, setSizes] = useState<SizeRow[]>([]);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState("");
 
@@ -39,6 +41,17 @@ export function CreateMenuItemForm({ categories }: { categories: Category[] }) {
       return;
     }
 
+    const parsedSizes: { label: string; price: number }[] = [];
+    for (const row of sizes) {
+      if (!row.label.trim() && !row.price.trim()) continue; // skip fully-empty rows
+      const sizePriceNumber = Number(row.price);
+      if (!row.label.trim() || !Number.isInteger(sizePriceNumber) || sizePriceNumber <= 0) {
+        setError("Vui lòng nhập đủ tên và giá hợp lệ cho từng size, hoặc xoá size trống");
+        return;
+      }
+      parsedSizes.push({ label: row.label.trim(), price: sizePriceNumber });
+    }
+
     setSubmitting(true);
     try {
       const response = await fetch("/api/admin/menu-items", {
@@ -50,6 +63,7 @@ export function CreateMenuItemForm({ categories }: { categories: Category[] }) {
           category,
           imageSrc: imageSrc.trim(),
           mustTry,
+          sizes: parsedSizes.length > 0 ? parsedSizes : undefined,
         }),
       });
 
@@ -64,6 +78,7 @@ export function CreateMenuItemForm({ categories }: { categories: Category[] }) {
       setImageSrc("");
       setImageOk(false);
       setMustTry(false);
+      setSizes([]);
       router.refresh();
     } catch {
       setError("Mất kết nối mạng, vui lòng thử lại.");
@@ -96,6 +111,7 @@ export function CreateMenuItemForm({ categories }: { categories: Category[] }) {
             placeholder="25000"
             className="rounded-[var(--radius-sm)] border border-line bg-surface px-4 py-2.5 text-sm text-ink outline-none focus:border-primary"
           />
+          <span className="text-xs text-ink-soft">Dùng khi món không có size riêng.</span>
         </label>
         <label className="flex flex-col gap-1.5">
           <span className="text-sm font-semibold text-ink">Danh mục</span>
@@ -132,6 +148,8 @@ export function CreateMenuItemForm({ categories }: { categories: Category[] }) {
             className="rounded-[var(--radius-sm)] border border-line bg-surface px-4 py-2.5 text-sm text-ink outline-none focus:border-primary"
           />
         </label>
+
+        <SizesEditor sizes={sizes} onChange={setSizes} />
       </div>
 
       {imageSrc.trim() ? (

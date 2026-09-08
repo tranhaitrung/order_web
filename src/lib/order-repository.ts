@@ -11,6 +11,8 @@ export interface OrderItemTopping {
 export interface CreateOrderItemInput {
   itemId: string;
   itemName: string;
+  sizeId?: string;
+  sizeLabel?: string;
   quantity: number;
   sugarLevel: string;
   iceLevel: string;
@@ -57,12 +59,14 @@ export async function createOrder(input: CreateOrderInput): Promise<CreatedOrder
 
     for (const item of input.items) {
       await client.query(
-        `INSERT INTO order_items (order_id, item_id, item_name, quantity, sugar_level, ice_level, note, toppings, line_total)
-         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)`,
+        `INSERT INTO order_items (order_id, item_id, item_name, size_id, size_label, quantity, sugar_level, ice_level, note, toppings, line_total)
+         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)`,
         [
           order.id,
           item.itemId,
           item.itemName,
+          item.sizeId ?? null,
+          item.sizeLabel ?? null,
           item.quantity,
           item.sugarLevel,
           item.iceLevel,
@@ -85,6 +89,7 @@ export async function createOrder(input: CreateOrderInput): Promise<CreatedOrder
 
 export interface OrderItemRecord {
   itemName: string;
+  sizeLabel: string | null;
   quantity: number;
   sugarLevel: string;
   iceLevel: string;
@@ -96,6 +101,7 @@ export interface OrderItemRecord {
 interface OrderItemRow {
   order_id: string;
   item_name: string;
+  size_label: string | null;
   quantity: number;
   sugar_level: string;
   ice_level: string;
@@ -111,7 +117,7 @@ async function attachItems<T extends { id: string }>(
 
   const orderIds = orders.map((order) => order.id);
   const itemsResult = await pool.query<OrderItemRow>(
-    `SELECT order_id, item_name, quantity, sugar_level, ice_level, note, toppings, line_total
+    `SELECT order_id, item_name, size_label, quantity, sugar_level, ice_level, note, toppings, line_total
      FROM order_items WHERE order_id = ANY($1::uuid[]) ORDER BY id`,
     [orderIds],
   );
@@ -121,6 +127,7 @@ async function attachItems<T extends { id: string }>(
     const items = itemsByOrderId.get(row.order_id) ?? [];
     items.push({
       itemName: row.item_name,
+      sizeLabel: row.size_label,
       quantity: row.quantity,
       sugarLevel: row.sugar_level,
       iceLevel: row.ice_level,
@@ -222,6 +229,7 @@ export async function findOrdersByDeliveryDate(date: string): Promise<AdminOrder
 export interface PrepSummaryLine {
   itemId: string;
   itemName: string;
+  sizeLabel: string | null;
   toppingNames: string[];
   sugarLevel: string;
   iceLevel: string;
@@ -232,12 +240,13 @@ export async function getPrepSummaryForDate(date: string): Promise<PrepSummaryLi
   const result = await pool.query<{
     item_id: string;
     item_name: string;
+    size_label: string | null;
     sugar_level: string;
     ice_level: string;
     toppings: OrderItemTopping[];
     quantity: number;
   }>(
-    `SELECT oi.item_id, oi.item_name, oi.sugar_level, oi.ice_level, oi.toppings, oi.quantity
+    `SELECT oi.item_id, oi.item_name, oi.size_label, oi.sugar_level, oi.ice_level, oi.toppings, oi.quantity
      FROM order_items oi
      JOIN orders o ON o.id = oi.order_id
      WHERE o.delivery_date = $1 AND o.status != 'cancelled'`,
@@ -250,7 +259,7 @@ export async function getPrepSummaryForDate(date: string): Promise<PrepSummaryLi
       .map((t) => t.id)
       .sort()
       .join(",");
-    const key = `${row.item_id}|${row.sugar_level}|${row.ice_level}|${toppingIds}`;
+    const key = `${row.item_id}|${row.size_label ?? ""}|${row.sugar_level}|${row.ice_level}|${toppingIds}`;
 
     const existing = groups.get(key);
     if (existing) {
@@ -261,6 +270,7 @@ export async function getPrepSummaryForDate(date: string): Promise<PrepSummaryLi
     groups.set(key, {
       itemId: row.item_id,
       itemName: row.item_name,
+      sizeLabel: row.size_label,
       toppingNames: row.toppings.map((t) => t.name),
       sugarLevel: row.sugar_level,
       iceLevel: row.ice_level,

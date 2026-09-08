@@ -16,6 +16,7 @@ import { CheckoutView, type CheckoutPayload } from "@/components/checkout/Checko
 import { ConfirmationView } from "@/components/checkout/ConfirmationView";
 import { ErrorView } from "@/components/checkout/ErrorView";
 import { ZaloButton } from "@/components/ZaloButton";
+import { saveLastCustomer } from "@/lib/customer-storage";
 
 type View = "browsing" | "checkout" | "success" | "error";
 
@@ -75,6 +76,7 @@ function Home({ isClosed, closedNote }: { isClosed: boolean; closedNote: string 
           deliverySlot: payload.deliverySlot,
           items: lines.map((line) => ({
             itemId: line.itemId,
+            sizeId: line.sizeId,
             quantity: line.quantity,
             toppingIds: line.toppingIds,
             sugarLevel: line.sugarLevel,
@@ -85,6 +87,11 @@ function Home({ isClosed, closedNote }: { isClosed: boolean; closedNote: string 
       });
 
       if (response.ok) {
+        saveLastCustomer({
+          customerName: payload.customerName,
+          customerPhone: payload.customerPhone,
+          deliveryAddress: payload.deliveryAddress,
+        });
         clearCart();
         setView("success");
         return;

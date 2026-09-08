@@ -11,6 +11,12 @@ export interface Topping {
   price: number;
 }
 
+export interface MenuItemSize {
+  id: string;
+  label: string;
+  price: number;
+}
+
 export interface MenuItem {
   id: string;
   name: string;
@@ -19,6 +25,7 @@ export interface MenuItem {
   mustTry?: boolean;
   imageSrc: string;
   soldOut: boolean;
+  sizes: MenuItemSize[];
 }
 
 export const SHOP = {

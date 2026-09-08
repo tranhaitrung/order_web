@@ -10,6 +10,7 @@ interface MenuItemCardProps {
 
 export function MenuItemCard({ item, onSelect }: MenuItemCardProps) {
   const soldOut = item.soldOut;
+  const minPrice = item.sizes.length > 0 ? Math.min(...item.sizes.map((s) => s.price)) : item.price;
 
   return (
     <div
@@ -61,7 +62,9 @@ export function MenuItemCard({ item, onSelect }: MenuItemCardProps) {
         <span className="line-clamp-2 font-display text-[10.5px] font-semibold leading-[1.15] text-white">
           {item.name}
         </span>
-        <span className="mt-0.5 block text-[10px] font-semibold text-white/95">{formatVnd(item.price)}</span>
+        <span className="mt-0.5 block text-[10px] font-semibold text-white/95">
+          {item.sizes.length > 0 ? `Từ ${formatVnd(minPrice)}` : formatVnd(minPrice)}
+        </span>
       </div>
 
       {soldOut ? null : (

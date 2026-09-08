@@ -16,6 +16,7 @@ export function CartItemRow({ line, onUpdateQuantity, onRemove }: CartItemRowPro
   const item = itemsById.get(line.itemId);
   if (!item) return null;
 
+  const sizeLabel = item.sizes.find((size) => size.id === line.sizeId)?.label;
   const toppingNames = line.toppingIds
     .map((id) => toppingsById.get(id)?.name)
     .filter((name): name is string => Boolean(name));
@@ -23,7 +24,10 @@ export function CartItemRow({ line, onUpdateQuantity, onRemove }: CartItemRowPro
   return (
     <div className="flex items-start justify-between gap-3 border-b border-line py-4 last:border-b-0">
       <div className="min-w-0">
-        <p className="font-display text-base font-semibold text-ink">{item.name}</p>
+        <p className="font-display text-base font-semibold text-ink">
+          {item.name}
+          {sizeLabel ? <span className="font-normal text-ink-soft"> ({sizeLabel})</span> : null}
+        </p>
         {toppingNames.length > 0 ? (
           <p className="mt-0.5 text-xs text-ink-soft">+ {toppingNames.join(", ")}</p>
         ) : null}

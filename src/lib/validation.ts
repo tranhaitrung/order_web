@@ -6,6 +6,7 @@ export const PHONE_REGEX = /^0[35789][0-9]{8}$/;
 
 export const orderItemSchema = z.object({
   itemId: z.string().min(1),
+  sizeId: z.string().min(1).optional(),
   quantity: z.number().int().min(1).max(20),
   toppingIds: z.array(z.string()).default([]),
   sugarLevel: z.enum(SUGAR_ICE_VALUES),
@@ -53,6 +54,11 @@ export const storeStatusUpdateSchema = z
     }
   });
 
+const menuItemSizeInputSchema = z.object({
+  label: z.string().trim().min(1, "Vui lòng nhập tên size").max(40),
+  price: z.number().int().min(1000, "Giá phải lớn hơn 0"),
+});
+
 export const menuItemUpdateSchema = z
   .object({
     name: z.string().trim().min(1, "Vui lòng nhập tên món").max(120).optional(),
@@ -61,6 +67,7 @@ export const menuItemUpdateSchema = z
     imageSrc: z.string().trim().url("Link ảnh không hợp lệ").optional(),
     mustTry: z.boolean().optional(),
     soldOut: z.boolean().optional(),
+    sizes: z.array(menuItemSizeInputSchema).max(6, "Tối đa 6 size").optional(),
   })
   .refine((data) => Object.keys(data).length > 0, { message: "Không có gì để cập nhật" });
 
@@ -70,6 +77,7 @@ export const menuItemCreateSchema = z.object({
   category: z.string().trim().min(1, "Vui lòng chọn danh mục"),
   imageSrc: z.string().trim().url("Link ảnh không hợp lệ"),
   mustTry: z.boolean().optional(),
+  sizes: z.array(menuItemSizeInputSchema).max(6, "Tối đa 6 size").optional(),
 });
 
 export const toppingCreateSchema = z.object({

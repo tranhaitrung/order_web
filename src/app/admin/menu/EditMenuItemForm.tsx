@@ -4,6 +4,7 @@ import Image from "next/image";
 import { FormEvent, useState } from "react";
 import { Category, MenuItem } from "@/lib/menu-data";
 import { Button } from "@/components/ui/Button";
+import { SizesEditor, SizeRow } from "@/app/admin/menu/SizesEditor";
 
 export function EditMenuItemForm({
   item,
@@ -21,6 +22,9 @@ export function EditMenuItemForm({
   const [category, setCategory] = useState(item.category);
   const [imageSrc, setImageSrc] = useState(item.imageSrc);
   const [mustTry, setMustTry] = useState(Boolean(item.mustTry));
+  const [sizes, setSizes] = useState<SizeRow[]>(
+    item.sizes.map((size) => ({ label: size.label, price: String(size.price) })),
+  );
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState("");
 
@@ -42,6 +46,17 @@ export function EditMenuItemForm({
       return;
     }
 
+    const parsedSizes: { label: string; price: number }[] = [];
+    for (const row of sizes) {
+      if (!row.label.trim() && !row.price.trim()) continue;
+      const sizePriceNumber = Number(row.price);
+      if (!row.label.trim() || !Number.isInteger(sizePriceNumber) || sizePriceNumber <= 0) {
+        setError("Vui lòng nhập đủ tên và giá hợp lệ cho từng size, hoặc xoá size trống");
+        return;
+      }
+      parsedSizes.push({ label: row.label.trim(), price: sizePriceNumber });
+    }
+
     setSubmitting(true);
     try {
       const response = await fetch(`/api/admin/menu-items/${item.id}`, {
@@ -53,6 +68,7 @@ export function EditMenuItemForm({
           category,
           imageSrc: imageSrc.trim(),
           mustTry,
+          sizes: parsedSizes,
         }),
       });
 
@@ -90,6 +106,7 @@ export function EditMenuItemForm({
             inputMode="numeric"
             className="rounded-[var(--radius-sm)] border border-line bg-surface px-4 py-2.5 text-sm text-ink outline-none focus:border-primary"
           />
+          <span className="text-xs text-ink-soft">Dùng khi món không có size riêng.</span>
         </label>
         <label className="flex flex-col gap-1.5">
           <span className="text-sm font-semibold text-ink">Danh mục</span>
@@ -123,6 +140,8 @@ export function EditMenuItemForm({
             className="rounded-[var(--radius-sm)] border border-line bg-surface px-4 py-2.5 text-sm text-ink outline-none focus:border-primary"
           />
         </label>
+
+        <SizesEditor sizes={sizes} onChange={setSizes} />
       </div>
 
       {imageSrc.trim() ? (

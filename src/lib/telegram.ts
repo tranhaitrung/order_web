@@ -3,6 +3,7 @@ import { SHOP } from "@/lib/menu-data";
 
 export interface OrderLineSummary {
   name: string;
+  sizeLabel?: string;
   quantity: number;
   toppingNames: string[];
   sugarLabel: string;
@@ -26,10 +27,11 @@ const RETRY_DELAYS_MS = [500, 1000, 2000];
 export function formatOrderMessage(order: OrderSummary): string {
   const lines = order.lines
     .map((line) => {
+      const size = line.sizeLabel ? ` (${line.sizeLabel})` : "";
       const toppings = line.toppingNames.length ? ` (+${line.toppingNames.join(", ")})` : "";
       const modifiers = `Đường: ${line.sugarLabel}, Đá: ${line.iceLabel}`;
       const note = line.note ? `\n   📝 ${line.note}` : "";
-      return `• ${line.name} x${line.quantity}${toppings} — ${formatVnd(line.lineTotal)}\n   ${modifiers}${note}`;
+      return `• ${line.name}${size} x${line.quantity}${toppings} — ${formatVnd(line.lineTotal)}\n   ${modifiers}${note}`;
     })
     .join("\n");
 

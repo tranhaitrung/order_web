@@ -33,6 +33,17 @@ ALTER TABLE menu_items ADD COLUMN IF NOT EXISTS is_sold_out BOOLEAN NOT NULL DEF
 
 CREATE INDEX IF NOT EXISTS menu_items_category_id_idx ON menu_items (category_id);
 
+-- Optional per-item sizes (e.g. Nhỏ/Vừa/Lớn), each with its own price. An item with no rows here has no sizes.
+CREATE TABLE IF NOT EXISTS menu_item_sizes (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  menu_item_id TEXT NOT NULL REFERENCES menu_items (id) ON DELETE CASCADE,
+  label TEXT NOT NULL,
+  price INTEGER NOT NULL,
+  sort_order INTEGER NOT NULL DEFAULT 0
+);
+
+CREATE INDEX IF NOT EXISTS menu_item_sizes_menu_item_id_idx ON menu_item_sizes (menu_item_id);
+
 CREATE TABLE IF NOT EXISTS orders (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   customer_name TEXT NOT NULL,
@@ -57,8 +68,13 @@ CREATE TABLE IF NOT EXISTS order_items (
   ice_level TEXT NOT NULL,
   note TEXT,
   toppings JSONB NOT NULL DEFAULT '[]',
-  line_total INTEGER NOT NULL
+  line_total INTEGER NOT NULL,
+  size_id TEXT,
+  size_label TEXT
 );
+
+ALTER TABLE order_items ADD COLUMN IF NOT EXISTS size_id TEXT;
+ALTER TABLE order_items ADD COLUMN IF NOT EXISTS size_label TEXT;
 
 CREATE INDEX IF NOT EXISTS order_items_order_id_idx ON order_items (order_id);
 
