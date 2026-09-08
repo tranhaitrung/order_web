@@ -73,8 +73,54 @@ export async function findToppingsByIds(ids: string[]): Promise<Map<string, Topp
   return new Map(result.rows.map((row) => [row.id, row]));
 }
 
-export async function setMenuItemSoldOut(id: string, soldOut: boolean): Promise<void> {
-  await pool.query("UPDATE menu_items SET is_sold_out = $1 WHERE id = $2", [soldOut, id]);
+export interface UpdateMenuItemInput {
+  name?: string;
+  price?: number;
+  category?: string;
+  imageSrc?: string;
+  mustTry?: boolean;
+  soldOut?: boolean;
+}
+
+export async function updateMenuItem(id: string, input: UpdateMenuItemInput): Promise<MenuItem | null> {
+  const fields: string[] = [];
+  const values: unknown[] = [];
+  let index = 1;
+
+  if (input.name !== undefined) {
+    fields.push(`name = $${index++}`);
+    values.push(input.name.trim());
+  }
+  if (input.price !== undefined) {
+    fields.push(`price = $${index++}`);
+    values.push(input.price);
+  }
+  if (input.category !== undefined) {
+    fields.push(`category_id = $${index++}`);
+    values.push(input.category);
+  }
+  if (input.imageSrc !== undefined) {
+    fields.push(`image_src = $${index++}`);
+    values.push(input.imageSrc.trim());
+  }
+  if (input.mustTry !== undefined) {
+    fields.push(`must_try = $${index++}`);
+    values.push(input.mustTry);
+  }
+  if (input.soldOut !== undefined) {
+    fields.push(`is_sold_out = $${index++}`);
+    values.push(input.soldOut);
+  }
+
+  if (fields.length === 0) return null;
+
+  values.push(id);
+  const result = await pool.query<MenuItemRow>(
+    `UPDATE menu_items SET ${fields.join(", ")} WHERE id = $${index} RETURNING ${MENU_ITEM_COLUMNS}`,
+    values,
+  );
+
+  return result.rows[0] ? mapMenuItemRow(result.rows[0]) : null;
 }
 
 /** Slugifies `name` and appends `-2`, `-3`, … until the id is free in `table`. */
@@ -138,4 +184,34 @@ export async function createTopping(input: CreateToppingInput): Promise<Topping>
   );
 
   return result.rows[0];
+}
+
+export interface UpdateToppingInput {
+  name?: string;
+  price?: number;
+}
+
+export async function updateTopping(id: string, input: UpdateToppingInput): Promise<Topping | null> {
+  const fields: string[] = [];
+  const values: unknown[] = [];
+  let index = 1;
+
+  if (input.name !== undefined) {
+    fields.push(`name = $${index++}`);
+    values.push(input.name.trim());
+  }
+  if (input.price !== undefined) {
+    fields.push(`price = $${index++}`);
+    values.push(input.price);
+  }
+
+  if (fields.length === 0) return null;
+
+  values.push(id);
+  const result = await pool.query<Topping>(
+    `UPDATE toppings SET ${fields.join(", ")} WHERE id = $${index} RETURNING id, name, price`,
+    values,
+  );
+
+  return result.rows[0] ?? null;
 }

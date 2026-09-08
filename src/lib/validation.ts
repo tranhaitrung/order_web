@@ -53,9 +53,16 @@ export const storeStatusUpdateSchema = z
     }
   });
 
-export const menuItemUpdateSchema = z.object({
-  soldOut: z.boolean(),
-});
+export const menuItemUpdateSchema = z
+  .object({
+    name: z.string().trim().min(1, "Vui lòng nhập tên món").max(120).optional(),
+    price: z.number().int().min(1000, "Giá phải lớn hơn 0").optional(),
+    category: z.string().trim().min(1, "Vui lòng chọn danh mục").optional(),
+    imageSrc: z.string().trim().url("Link ảnh không hợp lệ").optional(),
+    mustTry: z.boolean().optional(),
+    soldOut: z.boolean().optional(),
+  })
+  .refine((data) => Object.keys(data).length > 0, { message: "Không có gì để cập nhật" });
 
 export const menuItemCreateSchema = z.object({
   name: z.string().trim().min(1, "Vui lòng nhập tên món").max(120),
@@ -69,6 +76,13 @@ export const toppingCreateSchema = z.object({
   name: z.string().trim().min(1, "Vui lòng nhập tên topping").max(120),
   price: z.number().int().min(0, "Giá không hợp lệ"),
 });
+
+export const toppingUpdateSchema = z
+  .object({
+    name: z.string().trim().min(1, "Vui lòng nhập tên topping").max(120).optional(),
+    price: z.number().int().min(0, "Giá không hợp lệ").optional(),
+  })
+  .refine((data) => Object.keys(data).length > 0, { message: "Không có gì để cập nhật" });
 
 export const orderStatusUpdateSchema = z.object({
   status: z.enum(["pending", "completed", "cancelled"]),

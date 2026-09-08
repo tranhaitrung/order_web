@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
-import { updateMenuItem } from "@/lib/menu-repository";
-import { menuItemUpdateSchema } from "@/lib/validation";
+import { updateTopping } from "@/lib/menu-repository";
+import { toppingUpdateSchema } from "@/lib/validation";
 
 export async function PATCH(request: NextRequest, context: { params: Promise<{ id: string }> }) {
   const { id } = await context.params;
@@ -10,15 +10,15 @@ export async function PATCH(request: NextRequest, context: { params: Promise<{ i
     return NextResponse.json({ message: "Payload không hợp lệ" }, { status: 422 });
   }
 
-  const parsed = menuItemUpdateSchema.safeParse(rawBody);
+  const parsed = toppingUpdateSchema.safeParse(rawBody);
   if (!parsed.success) {
     return NextResponse.json({ message: "Dữ liệu không hợp lệ" }, { status: 422 });
   }
 
-  const item = await updateMenuItem(id, parsed.data);
-  if (!item) {
-    return NextResponse.json({ message: "Không tìm thấy món" }, { status: 404 });
+  const topping = await updateTopping(id, parsed.data);
+  if (!topping) {
+    return NextResponse.json({ message: "Không tìm thấy topping" }, { status: 404 });
   }
 
-  return NextResponse.json({ item });
+  return NextResponse.json({ topping });
 }

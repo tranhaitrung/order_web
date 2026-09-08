@@ -5,12 +5,15 @@ import { useRouter } from "next/navigation";
 import { Category, MenuItem } from "@/lib/menu-data";
 import { formatVnd } from "@/lib/format";
 import { cn } from "@/lib/cn";
+import { EditMenuItemForm } from "@/app/admin/menu/EditMenuItemForm";
 
-export function MenuAvailabilityList({ categories, items }: { categories: Category[]; items: MenuItem[] }) {
+export function MenuAvailabilityList({ categories, items: initialItems }: { categories: Category[]; items: MenuItem[] }) {
   const router = useRouter();
+  const [items, setItems] = useState(initialItems);
   const [pendingId, setPendingId] = useState<string | null>(null);
+  const [editingId, setEditingId] = useState<string | null>(null);
   const [soldOutById, setSoldOutById] = useState<Record<string, boolean>>(() =>
-    Object.fromEntries(items.map((item) => [item.id, item.soldOut])),
+    Object.fromEntries(initialItems.map((item) => [item.id, item.soldOut])),
   );
 
   async function toggle(item: MenuItem) {
@@ -36,6 +39,13 @@ export function MenuAvailabilityList({ categories, items }: { categories: Catego
     }
   }
 
+  function handleSaved(updated: MenuItem) {
+    setItems((current) => current.map((item) => (item.id === updated.id ? updated : item)));
+    setSoldOutById((current) => ({ ...current, [updated.id]: updated.soldOut }));
+    setEditingId(null);
+    router.refresh();
+  }
+
   return (
     <div className="flex flex-col gap-6">
       {categories.map((category) => (
@@ -46,30 +56,51 @@ export function MenuAvailabilityList({ categories, items }: { categories: Catego
               .filter((item) => item.category === category.id)
               .map((item) => {
                 const soldOut = soldOutById[item.id];
+                const isEditing = editingId === item.id;
                 return (
                   <div
                     key={item.id}
-                    className="flex items-center justify-between gap-3 rounded-[var(--radius-md)] border border-line bg-surface px-4 py-3"
+                    className="rounded-[var(--radius-md)] border border-line bg-surface px-4 py-3"
                   >
-                    <div>
-                      <p className="font-medium text-ink">{item.name}</p>
-                      <p className="text-xs text-ink-soft">{formatVnd(item.price)}</p>
-                    </div>
-                    <button
-                      type="button"
-                      role="switch"
-                      aria-checked={!soldOut}
-                      disabled={pendingId === item.id}
-                      onClick={() => toggle(item)}
-                      className={cn(
-                        "flex items-center gap-2 rounded-full border px-3 py-1.5 text-xs font-semibold transition-colors disabled:opacity-50",
-                        soldOut
-                          ? "border-error/30 bg-error-soft text-error"
-                          : "border-primary/30 bg-primary-soft text-primary",
-                      )}
-                    >
-                      {soldOut ? "Hết hàng" : "Còn hàng"}
-                    </button>
+                    {isEditing ? (
+                      <EditMenuItemForm
+                        item={item}
+                        categories={categories}
+                        onCancel={() => setEditingId(null)}
+                        onSaved={handleSaved}
+                      />
+                    ) : (
+                      <div className="flex items-center justify-between gap-3">
+                        <div>
+                          <p className="font-medium text-ink">{item.name}</p>
+                          <p className="text-xs text-ink-soft">{formatVnd(item.price)}</p>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <button
+                            type="button"
+                            onClick={() => setEditingId(item.id)}
+                            className="text-xs font-semibold text-primary hover:underline"
+                          >
+                            Sửa
+                          </button>
+                          <button
+                            type="button"
+                            role="switch"
+                            aria-checked={!soldOut}
+                            disabled={pendingId === item.id}
+                            onClick={() => toggle(item)}
+                            className={cn(
+                              "flex items-center gap-2 rounded-full border px-3 py-1.5 text-xs font-semibold transition-colors disabled:opacity-50",
+                              soldOut
+                                ? "border-error/30 bg-error-soft text-error"
+                                : "border-primary/30 bg-primary-soft text-primary",
+                            )}
+                          >
+                            {soldOut ? "Hết hàng" : "Còn hàng"}
+                          </button>
+                        </div>
+                      </div>
+                    )}
                   </div>
                 );
               })}
