@@ -44,6 +44,15 @@ CREATE TABLE IF NOT EXISTS menu_item_sizes (
 
 CREATE INDEX IF NOT EXISTS menu_item_sizes_menu_item_id_idx ON menu_item_sizes (menu_item_id);
 
+-- Latest known name/address per phone number, kept up to date on every order. Powers auto-fill
+-- for return customers, including on a different browser/device than their last order.
+CREATE TABLE IF NOT EXISTS customers (
+  phone TEXT PRIMARY KEY,
+  name TEXT NOT NULL,
+  address TEXT NOT NULL,
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+
 CREATE TABLE IF NOT EXISTS orders (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   customer_name TEXT NOT NULL,

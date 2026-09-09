@@ -3,6 +3,7 @@ import { formatDeliveryDateForMessage, isDeliverySlotAvailable, nowInVietnam } f
 import { getClientIp } from "@/lib/http";
 import { deliverySlotLabel, sugarIceLabel } from "@/lib/menu-data";
 import { findMenuItemsByIds, findToppingsByIds } from "@/lib/menu-repository";
+import { upsertCustomer } from "@/lib/customer-repository";
 import { createOrder, type CreateOrderItemInput } from "@/lib/order-repository";
 import { checkRateLimit } from "@/lib/rate-limit";
 import { getStoreStatus, isEffectivelyClosed } from "@/lib/store-status-repository";
@@ -135,6 +136,13 @@ export async function POST(request: NextRequest) {
       { message: "Không thể lưu đơn hàng, vui lòng thử lại sau." },
       { status: 500 },
     );
+  }
+
+  try {
+    await upsertCustomer(customerPhone, customerName, deliveryAddress);
+  } catch (error) {
+    // Đơn hàng đã lưu — lưu hồ sơ khách chỉ phục vụ auto-fill lần sau, không chặn đơn hàng.
+    console.error(`[orders] Lưu hồ sơ khách thất bại cho đơn ${orderId}`, error);
   }
 
   const orderSummary = {

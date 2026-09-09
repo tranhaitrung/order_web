@@ -41,9 +41,34 @@ export function CheckoutView({ lines, onBack, onSubmit, submitting }: CheckoutVi
   const [address, setAddress] = useState(() => loadLastCustomer()?.deliveryAddress ?? "");
   const [delivery, setDelivery] = useState(() => pickDefaultDelivery());
   const [errors, setErrors] = useState<{ name?: string; phone?: string; address?: string }>({});
+  const [lookupStatus, setLookupStatus] = useState<"idle" | "loading" | "found" | "not-found">("idle");
   const total = cartTotal(lines, itemsById, toppingsById);
 
   const dateOptions = useMemo(() => buildDeliveryDateOptions(), []);
+
+  async function handlePhoneBlur() {
+    const trimmed = phone.trim();
+    if (!PHONE_PATTERN.test(trimmed)) return;
+
+    setLookupStatus("loading");
+    try {
+      const response = await fetch(`/api/customers/lookup?phone=${encodeURIComponent(trimmed)}`);
+      if (!response.ok) {
+        setLookupStatus("idle");
+        return;
+      }
+      const body = (await response.json()) as { customer: { name: string; address: string } | null };
+      if (body.customer) {
+        setName(body.customer.name);
+        setAddress(body.customer.address);
+        setLookupStatus("found");
+      } else {
+        setLookupStatus("not-found");
+      }
+    } catch {
+      setLookupStatus("idle");
+    }
+  }
 
   function selectDate(dateKey: string) {
     const nextSlot = isDeliverySlotAvailable(dateKey, delivery.slot)
@@ -137,13 +162,23 @@ export function CheckoutView({ lines, onBack, onSubmit, submitting }: CheckoutVi
           <span className="text-sm font-semibold text-ink">Số điện thoại</span>
           <input
             value={phone}
-            onChange={(e) => setPhone(e.target.value)}
+            onChange={(e) => {
+              setPhone(e.target.value);
+              setLookupStatus("idle");
+            }}
+            onBlur={handlePhoneBlur}
             placeholder="09xxxxxxxx"
             inputMode="numeric"
             autoComplete="tel"
             className="rounded-[var(--radius-sm)] border border-line bg-surface px-4 py-3 text-base text-ink outline-none transition-colors focus:border-primary"
           />
           {errors.phone ? <span className="text-xs font-medium text-error">{errors.phone}</span> : null}
+          {!errors.phone && lookupStatus === "loading" ? (
+            <span className="text-xs text-ink-soft">Đang tìm thông tin đã lưu…</span>
+          ) : null}
+          {!errors.phone && lookupStatus === "found" ? (
+            <span className="text-xs font-medium text-primary">Đã tự điền thông tin từ lần đặt trước.</span>
+          ) : null}
         </label>
 
         <label className="flex flex-col gap-1.5">
