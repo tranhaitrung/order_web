@@ -153,8 +153,8 @@ function Home({ isClosed, closedNote }: { isClosed: boolean; closedNote: string 
         <ItemModal
           item={activeItem}
           onClose={() => setActiveItem(null)}
-          onAddToCart={({ quantity, toppingIds, sugarLevel, iceLevel, note }) =>
-            addLine({ itemId: activeItem.id, quantity, toppingIds, sugarLevel, iceLevel, note })
+          onAddToCart={({ quantity, sizeId, toppingIds, sugarLevel, iceLevel, note }) =>
+            addLine({ itemId: activeItem.id, sizeId, quantity, toppingIds, sugarLevel, iceLevel, note })
           }
         />
       ) : null}
