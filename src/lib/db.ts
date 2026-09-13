@@ -5,10 +5,10 @@ declare global {
 }
 
 /**
- * Managed providers like Supabase require TLS but use certificates Node's default trust store
- * won't have, so the chain isn't verified — this is standard practice for these providers and
- * still encrypts the connection. Self-hosted Postgres (e.g. the docker-compose `db` service) has
- * no TLS listener by default, so SSL stays off there unless explicitly requested.
+ * Managed providers like Supabase/Neon require TLS but use certificates Node's default trust
+ * store won't have, so the chain isn't verified — this is standard practice for these providers
+ * and still encrypts the connection. Self-hosted Postgres (e.g. the docker-compose `db` service)
+ * has no TLS listener by default, so SSL stays off there unless explicitly requested.
  * Override with DATABASE_SSL=true|false if auto-detection guesses wrong for your setup.
  */
 function resolveSsl(connectionString: string): false | { rejectUnauthorized: boolean } {
@@ -16,8 +16,28 @@ function resolveSsl(connectionString: string): false | { rejectUnauthorized: boo
   if (override === "false") return false;
   if (override === "true") return { rejectUnauthorized: false };
 
-  const needsSsl = /supabase\.(co|com)|sslmode=require/.test(connectionString);
+  const needsSsl = /supabase\.(co|com)|neon\.tech|sslmode=require/.test(connectionString);
   return needsSsl ? { rejectUnauthorized: false } : false;
+}
+
+/**
+ * pg's own connection-string parser derives its own `ssl` setting from a `sslmode` query param
+ * and re-merges it into the config AFTER the `ssl` option we pass explicitly (see
+ * ConnectionParameters in pg/lib/connection-parameters.js), silently overriding it — `sslmode=require`
+ * in particular gets treated as full certificate-chain verification, which fails against
+ * providers like Neon/Supabase whose cert chain Node doesn't trust by default. `channel_binding`
+ * (Neon includes this by default) isn't supported by pg's SASL implementation either. Stripping
+ * both lets our own `ssl` option above be the only source of truth.
+ */
+function sanitizeConnectionString(connectionString: string): string {
+  try {
+    const url = new URL(connectionString);
+    url.searchParams.delete("sslmode");
+    url.searchParams.delete("channel_binding");
+    return url.toString();
+  } catch {
+    return connectionString;
+  }
 }
 
 function createPool(): Pool {
@@ -25,7 +45,10 @@ function createPool(): Pool {
   if (!connectionString) {
     throw new Error("DATABASE_URL chưa được cấu hình");
   }
-  return new Pool({ connectionString, ssl: resolveSsl(connectionString) });
+  return new Pool({
+    connectionString: sanitizeConnectionString(connectionString),
+    ssl: resolveSsl(connectionString),
+  });
 }
 
 let cachedPool: Pool | undefined;
