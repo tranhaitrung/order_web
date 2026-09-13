@@ -27,6 +27,24 @@ npm run db:migrate               # create tables
 npm run db:seed                  # load the menu
 ```
 
+### Using Supabase instead of self-hosted Postgres
+
+Supabase is just managed Postgres, so no code changes are needed — only `DATABASE_URL`:
+
+1. In your Supabase project: **Project Settings → Database → Connection string**, copy the **URI**
+   (use the pooler connection — host contains `pooler.supabase.com` — for the small connection
+   limits on hosted apps; the direct `db.<project-ref>.supabase.co` host works too for a
+   long-running Docker container like `app` here).
+2. Fill in your database password and set it as `DATABASE_URL` in `.env.local` (dev) or `.env`
+   (the file `docker compose up -d app` reads).
+3. Run `npm run db:migrate` against it once to create the tables (`npm run db:seed` if you want
+   the sample menu too).
+
+SSL is required by Supabase and is enabled automatically — `db.ts` detects a `supabase.co` /
+`supabase.com` host (or an explicit `sslmode=require` in the connection string) and turns TLS on.
+Set `DATABASE_SSL=true` or `DATABASE_SSL=false` in your env to override that auto-detection if
+you're using a different managed provider or a self-hosted Postgres with TLS enabled.
+
 ## Deploy with Docker
 
 `docker compose up -d app` builds and runs the app container, reading config straight from `.env.local`

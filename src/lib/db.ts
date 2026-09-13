@@ -4,12 +4,28 @@ declare global {
   var pgPool: Pool | undefined;
 }
 
+/**
+ * Managed providers like Supabase require TLS but use certificates Node's default trust store
+ * won't have, so the chain isn't verified — this is standard practice for these providers and
+ * still encrypts the connection. Self-hosted Postgres (e.g. the docker-compose `db` service) has
+ * no TLS listener by default, so SSL stays off there unless explicitly requested.
+ * Override with DATABASE_SSL=true|false if auto-detection guesses wrong for your setup.
+ */
+function resolveSsl(connectionString: string): false | { rejectUnauthorized: boolean } {
+  const override = process.env.DATABASE_SSL;
+  if (override === "false") return false;
+  if (override === "true") return { rejectUnauthorized: false };
+
+  const needsSsl = /supabase\.(co|com)|sslmode=require/.test(connectionString);
+  return needsSsl ? { rejectUnauthorized: false } : false;
+}
+
 function createPool(): Pool {
   const connectionString = process.env.DATABASE_URL;
   if (!connectionString) {
     throw new Error("DATABASE_URL chưa được cấu hình");
   }
-  return new Pool({ connectionString });
+  return new Pool({ connectionString, ssl: resolveSsl(connectionString) });
 }
 
 let cachedPool: Pool | undefined;
